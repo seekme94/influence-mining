@@ -15,12 +15,13 @@ The file contains source code for implementation of two basic influence mining m
 influence (edgesFile, budget, steps, model, p)
 ```
 This is a wrapper function to call influence_LT and influence_IC functions
-- edgesFile: complete path to the dataset file, which MUST be in form of white-space separated edge list, representing a network
-- budget: the percentage of total nodes from the network that should be initially activated in order to start the diffusion process. Default value is 5%
-- steps: the time steps for which, the diffusion process should run. Default value is 1
-- model: the influence model to run the dataset on. Value MUST either be "LT" or "IC". Default value is "LT"
-seed_method: the selection method for seed (initial nodes). Value can be "random", "degree", "closeness", "betweenness", "coreness" or "eigenvector". Default value is "random"
-- p: the probability of activation of a neighbour node. This is applicable only to IC model. Default value is 0.5
+- graph: is the graph object
+- budget: defines what percentage of most influential nodes out of all nodes is required as output. Default value is 1
+- steps: is the time steps for which, the diffusion process should run. If exhaustive run is required, provide a high value (like 100). Default value is 1
+- model: is influence model to run the dataset on. Value MUST either be "LT" or "IC"
+- maximize: should be TRUE if influential nodes are to be derived using Greedy algorithm
+- seed_method: is the selection method for seed (initial nodes). Value can be "random", "degree", "closeness", "betweenness", "coreness" or "eigenvector". Default value is "random"
+- prob: is the probability of activation of a neighbour node. This is applicable only to IC model currently. Default value is 0.5
 
 > Output: summary of influence process, including no. of nodes, edges, seed set size, nodes influenced and time taken
 

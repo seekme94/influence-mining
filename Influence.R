@@ -2,12 +2,21 @@
 
 library(igraph)
 
-influence <- function (graph, seed=NULL, budget=1, steps=1, model=c("IC", "LT"), maximize=FALSE, seed_method=c("random", "degree", "closeness", "betweenness", "coreness", "eigenvector"), prob) {
+# This function is a wrapper for influence_IC and influence_LT functions
+# "graph" is the graph object
+# "budget" defines what percentage of most influential nodes out of all nodes is required as output. Default value is 1
+# "steps" is the time steps for which, the diffusion process should run. If exhaustive run is required, provide a high value (like 100). Default value is 1
+# "model" is influence model to run the dataset on. Value MUST either be "LT" or "IC"
+# "maximize" should be TRUE if influential nodes are to be derived using Greedy algorithm
+# "seed_method" is the selection method for seed (initial nodes). Value can be "random", "degree", "closeness", "betweenness", "coreness" or "eigenvector"
+# "prob" is the probability of activation of a neighbour node. This is applicable only to IC model currently
+influence <- function (graph, budget=1, steps=1, model=c("IC", "LT"), maximize=FALSE, seed_method=c("random", "degree", "closeness", "betweenness", "coreness", "eigenvector"), prob=0.5) {
     # In case of influence maximization
     if (maximize) {
         influence_max(graph, budget, steps, model, prob=prob)
     }
     else {
+        seed <- NULL
         # Initially, select budget% seed nodes if not provided
         if (is.null(seed)) {
             seed <- select_seed(graph, budget, seed_method)
@@ -23,6 +32,12 @@ influence <- function (graph, seed=NULL, budget=1, steps=1, model=c("IC", "LT"),
     }
 }
 
+# This function implements Greedy algorithm for Influence Maximization
+# "G" is the graph object
+# "budget" defines what percentage of most influential nodes out of all nodes is required as output
+# "steps" is the time steps for which, the diffusion process should run. If exhaustive run is required, provide a high value (like 100)
+# "model" is influence model to run the dataset on. Value MUST either be "LT" or "IC"
+# "prob" is the probability of activation of a neighbour node. This is applicable only to IC model currently
 influence_max <- function(G, budget, steps, model, prob) {
     start <- as.numeric(Sys.time())
     # Save list of nodes
@@ -68,7 +83,8 @@ influence_max <- function(G, budget, steps, model, prob) {
 # This function calculates influence of k nodes under Independent Cascade model
 # "graph" is the graph object
 # "seed" is the initial seed passed
-# "t" is the number of time steps the function should repeat till
+# "steps" is the number of time steps the function should repeat till
+# "prob" is the probability of activation of a neighbour node. This is applicable only to IC model currently
 influence_IC <- function(graph, seed, steps, prob) {
     # Algorithm: Independent Cascade model takes a network (G) as input and some budget (k).
     # From G, k fraction of nodes are initially activated by some method. Next, we attempt to activate more nodes in the neighbourhood of these nodes.
@@ -121,7 +137,7 @@ influence_IC <- function(graph, seed, steps, prob) {
 # This function calculates influence of k nodes under Linear Threshold model
 # "graph" is the graph object of igraph library
 # "seed" is the initial seed
-# "t" is the number of time steps the function should repeat till
+# "steps" is the number of time steps the function should repeat till
 # "threshold" is minimum threshold required to activate a node under observation
 influence_LT <- function(graph, seed, steps, threshold) {
     # Algorithm: Linear Threshold model takes a network (G) as input and some budget (k).
@@ -229,7 +245,7 @@ select_seed <- function (G, k, seed_method=c("random", "degree", "closeness", "b
 }
 
 
-## Trying to improve maximization
+## Trying to improve maximization. NOT TESTED
 new_influence_max <- function(G, budget, steps, model, prob) {
     start <- as.numeric(Sys.time())
     # Save list of nodes
