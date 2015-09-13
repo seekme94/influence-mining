@@ -1,6 +1,5 @@
 # Project: influence-mining
-## Version:
-> 0.1.0
+### Version: 0.1.0
 
 The purpose of this project is to provide an interface to perform influence mining operations on networks, preferably Social networks.
 
