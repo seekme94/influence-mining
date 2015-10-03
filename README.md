@@ -21,7 +21,7 @@ This is a wrapper function to call influence_LT and influence_IC functions
 - steps: is the time steps for which, the diffusion process should run. If exhaustive run is required, provide a high value (like 100). Default value is 1
 - model: is influence model to run the dataset on. Value MUST either be "LT" or "IC"
 - maximize: should be TRUE if influential nodes are to be derived using Greedy algorithm
-- seed_method: is the selection method for seed (initial nodes). Value can be "random", "degree", "closeness", "betweenness", "coreness" or "eigenvector". Default value is "random"
+- seed_method: is the selection method for seed (initial nodes). Value can be "random", "degree", "closeness", "betweenness", "coreness", "eigenvector", "a-degree", "a-closeness", "a-betweenness", "a-coreness", "a-eigenvector". Default value is "random"
 - prob: is the probability of activation of a neighbour node. This is applicable only to IC model currently. Default value is 0.5
 
 > Output: summary of influence process, including no. of nodes, edges, seed set size, nodes influenced and time taken
@@ -40,6 +40,16 @@ This function calculates influence (number of nodes in the network expected to b
 select_seed
 ```
 This function returns a set of nodes, to be used as seed in influence functions on the basis of given seed selection method
+- G: a graph object of library *igraph*
+- k: percentage of seed nodes from the network to be chosen
+- seed_method: see influence function
+
+> Output: subset vector of nodes in a graph
+
+```
+select_adaptive_seed
+```
+This function returns a set of nodes, to be used as seed in influence functions on the basis of given adaptive method for seed selection
 - G: a graph object of library *igraph*
 - k: percentage of seed nodes from the network to be chosen
 - seed_method: see influence function
