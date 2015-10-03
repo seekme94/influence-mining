@@ -11,7 +11,7 @@ library(igraph)
 # "maximize" should be TRUE if influential nodes are to be derived using Greedy algorithm
 # "seed_method" is the selection method for seed (initial nodes). Value can be "random", "degree", "closeness", "betweenness", "coreness" or "eigenvector"
 # "prob" is the probability of activation of a neighbour node. This is applicable only to IC model currently
-influence <- function (graph, seed=NULL, budget=1, steps=1, model=c("IC", "LT"), maximize=FALSE, seed_method=c("random", "degree", "closeness", "betweenness", "coreness", "eigenvector"), prob=0.5) {
+influence <- function (graph, seed=NULL, budget=1, steps=1, model=c("IC", "LT"), maximize=FALSE, seed_method=c("random", "degree", "closeness", "betweenness", "coreness", "eigenvector", "a-degree", "a-closeness", "a-betweenness", "a-coreness", "a-eigenvector"), prob=0.5) {
   # In case of influence maximization
   if (maximize) {
     influence_max(graph, budget, steps, model, prob=prob)
@@ -199,7 +199,7 @@ influence_LT <- function(graph, seed, steps, threshold) {
 }
 
 # This function inputs a graph object G, k as percentage and a seed method and returns k% nodes as seed using the method given
-select_seed <- function (G, k, seed_method=c("random", "degree", "closeness", "betweenness", "coreness", "eigenvector")) {
+select_seed <- function (G, k, seed_method=c("random", "degree", "closeness", "betweenness", "coreness", "eigenvector", "a-degree", "a-closeness", "a-betweenness", "a-coreness", "a-eigenvector")) {
   nodes <- V(G)
   seed <- NULL
   # Calculate the actual number of nodes to select as seed
@@ -240,6 +240,9 @@ select_seed <- function (G, k, seed_method=c("random", "degree", "closeness", "b
     data <- data.frame(node = c(nodes), eigenvector = c(eigenvectors))
     # Select nodes with highest eigenvector centralities
     seed <- tail(data[order(data$eigenvector),], size)$node
+  }
+  else if (seed_method %in% c("a-degree", "a-closeness", "a-betweenness", "a-coreness", "a-eigenvector")) {
+    seed <- select_adaptive_seed(G, k, seed_method)
   }
   seed
 }
@@ -304,7 +307,7 @@ select_adaptive_seed <- function (G, k, seed_method=c("a-degree", "a-closeness",
   size <- length(V(G)) * k / 100
   if (seed_method == "a-degree") {
     while (length(seed) < size) {
-      degree <- degree(G, V(G), mode="all", directed=FALSE)
+      degree <- degree(G, V(G), mode="all")
       max_node <- which.max(degree)
       seed <- c(seed, max_node)
       G <- delete.vertices(G, max_node)
@@ -313,7 +316,7 @@ select_adaptive_seed <- function (G, k, seed_method=c("a-degree", "a-closeness",
   }
   else if (seed_method == "a-closeness") {
     while (length(seed) < size) {
-      closeness <- closeness(G, V(G), mode="all", directed=FALSE)
+      closeness <- closeness(G, V(G), mode="all")
       max_node <- which.max(closeness)
       seed <- c(seed, max_node)
       G <- delete.vertices(G, max_node)
@@ -322,7 +325,7 @@ select_adaptive_seed <- function (G, k, seed_method=c("a-degree", "a-closeness",
   }
   else if(seed_method == "a-betweenness") {
     while (length(seed) < size) {
-      betweenness <- betweenness(G, V(G), directed=FALSE)
+      betweenness <- betweenness(G, V(G))
       max_node <- which.max(betweenness)
       seed <- c(seed, max_node)
       G <- delete.vertices(G, max_node)
