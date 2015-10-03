@@ -1,5 +1,5 @@
 # Project: influence-mining
-### Version: 0.1.0
+### Version: 0.1.1
 
 The purpose of this project is to provide an interface to perform influence mining operations on networks, preferably Social networks.
 
@@ -12,11 +12,12 @@ Influence.R
 ```
 The file contains source code for implementation of two basic influence mining models: Independent Cascade model and Linear Threshold model[1]
 ```
-influence (edgesFile, budget, steps, model, p)
+influence (graph, seed, budget, steps, model, maximize, seed_method, prob)
 ```
 This is a wrapper function to call influence_LT and influence_IC functions
-- graph: is the graph object
+- graph: is the igraph object
 - budget: defines what percentage of most influential nodes out of all nodes is required as output. Default value is 1
+- seed: (optional) is a set of seed (initial nodes). If this parameter is NULL, then seed_method parameter should be given
 - steps: is the time steps for which, the diffusion process should run. If exhaustive run is required, provide a high value (like 100). Default value is 1
 - model: is influence model to run the dataset on. Value MUST either be "LT" or "IC"
 - maximize: should be TRUE if influential nodes are to be derived using Greedy algorithm
