@@ -247,7 +247,6 @@ select_seed <- function (G, k, seed_method=c("random", "degree", "closeness", "b
   seed
 }
 
-
 ## Trying to improve maximization. NOT TESTED
 new_influence_max <- function(G, budget, steps, model, prob) {
   start <- as.numeric(Sys.time())
@@ -296,6 +295,122 @@ largest_component <- function(G) {
 # This function finds influential nodes in communities in given graph
 community_influence <- function() {
   # TODO
+}
+
+# This method finds communities in the given graph and returns the graph after adding a vector "group" to its vertices
+find_communities <- function(G, plot=TRUE, method=c("multilevel", "edgebetweenness", "fastgreedy", "eigenvector", "spinglass", "walktrap", "clique", "largescale")) {
+  # Based on Louvaine's algorithm; better at scaling and avoids formation of super communities
+  if (method == "multilevel") {
+    communities <- multilevel.community(G)
+    V(G)$group <- communities$membership
+  }
+  else if (method == "edgebetweenness") {
+    communities <- edge.betweenness.community(G)
+    V(G)$group <- communities$membership
+  }
+  else if (method == "eigenvector") {
+    communities <- leading.eigenvector.community(G)
+    V(G)$group <- communities$membership
+  }
+  else if (method == "fastgreedy") {
+    communities <- fastgreedy.community(G)
+    members <- community.to.membership(G, communities$merges, steps=which.max(communities$modularity) - 1)
+    V(G)$group <- members$membership
+  }
+  else if (method == "spinglass") {
+    communities <- spinglass.community(G, spins=10)
+    V(G)$group <- communities$membership
+  }
+  else if (method == "walktrap") {
+    communities <- walktrap.community(G)
+    members <- community.to.membership(G, communities$merges, steps=which.max(communities$modularity) - 1)
+    V(G)$group <- members$membership
+  }
+  else if (method == "labelpropagation") {
+    V(G)$group <- label.propagation.community(G)$membership
+  }
+  else if (method == "clique") {
+    
+  }
+  else if (method == "largescale") {
+    
+  }
+  # Plot the graph, showing communities
+  if (plot) {
+    G$layout <- layout.kamada.kawai
+    size <- length(unique(V(G)$group))
+    V(G)$color <- rainbow(size)[V(G)$group]
+    plot(G)
+  }
+  G
+}
+
+# Community detection algorithm by Palla et al.
+# Palla, Gergely, et al. "Uncovering the overlapping community structure of complex networks in nature and society." Nature 435.7043 (2005): 814-818.
+clique.community <- function(graph, k) {
+  clq <- cliques(graph, min=k, max=k)
+  edges <- c()
+  for (i in seq_along(clq)) {
+    for (j in seq_along(clq)) {
+      if ( length(unique(c(clq[[i]], clq[[j]]))) == k+1 ) {
+        edges <- c(edges, c(i,j))
+      }
+    }
+  }
+  clq.graph <- simplify(graph(edges))
+  V(clq.graph)$name <- seq_len(vcount(clq.graph))
+  comps <- decompose.graph(clq.graph)
+  lapply(comps, function(x) { unique(unlist(clq[ V(x)$name ])) })
+}
+
+# Community detection 
+# Raghavan, Usha Nandini, Réka Albert, and Soundar Kumara. "Near linear time algorithm to detect community structures in large-scale networks." Physical Review E 76.3 (2007): 036106.
+large.scale.community <- function(graph, mode="all") {
+  V(graph)$group <- as.character(V(graph))
+  thisOrder <- sample(vcount(graph), vcount(graph))-1
+  t <- 0
+  done <- FALSE
+  while(!done){
+    t <- t + 1
+    cat("\rtick:",t)
+    done <- TRUE ## change to FALSE whenever a node changes groups              
+    for(v in thisOrder){
+      ## get the neighbor group frequencies:
+      groupFreq <- table(V(graph)[neighbors(graph, v, mode=mode)]$group)
+      ## pick one of the most frequent:
+      newGroup <- sample(names(groupFreq) [groupFreq==max(groupFreq)],1)
+      if(done) {
+        done <- newGroup == V(graph)[v]$group
+      }
+      V(graph)[v]$group <- newGroup
+    }
+  }
+  ## now fix any distinct groups with same labels:                              
+  for(i in unique(V(graph)$group)) {
+    ## only bother for connected groups                                         
+    if(!is.connected(subgraph(graph, V(graph)[group==i]))) {
+      theseNodes <- V(graph)[group==i]
+      theseClusters <- clusters(subgraph(graph, theseNodes))
+      ## iterate through the clusters and append their names                    
+      for(j in unique(theseClusters$membership)) {
+        V(graph)[theseNodes[theseClusters$membership==j]]$group <- paste(i,j,sep=".")
+      }
+    }
+  }
+  graph
+}
+
+# This function performs a Wilcoxon rank-sum test on the "internal" and "external" degrees of a community in order to quantify its significance. 
+# The edges within a community are "internal" and the edges connecting the vertices of a community with the rest of the graph are "external". 
+# More internal than external edges show that the community is significant; the otherwise suggests that the community is in fact an "anti-community".
+community.significance.test <- function(graph, vs, ...) {
+  if (is.directed(graph)) {
+    stop("This method requires an undirected graph")
+  }
+  subgraph <- induced.subgraph(graph, vs)
+  in.degrees <- degree(subgraph)
+  out.degrees <- degree(graph, vs) - in.degrees
+  wilcox.test(in.degrees, out.degrees, ...)
 }
 
 # This function inputs a graph object G, k as percentage and a seed method and returns k% nodes as seed using the adaptive method provided
