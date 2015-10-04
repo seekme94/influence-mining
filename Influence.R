@@ -298,7 +298,9 @@ community_influence <- function() {
 }
 
 # This method finds communities in the given graph and returns the graph after adding a vector "group" to its vertices
-find_communities <- function(G, plot=TRUE, method=c("multilevel", "edgebetweenness", "fastgreedy", "eigenvector", "spinglass", "walktrap", "clique", "largescale")) {
+# "G" is the graph object of igraph library
+# "method" is the algorithm for finding communities
+find_communities <- function(G, plot=TRUE, method=c("multilevel", "edgebetweenness", "fastgreedy", "eigenvector", "spinglass", "walktrap", "labelpropagation", "clique", "largescale")) {
   # Based on Louvaine's algorithm; better at scaling and avoids formation of super communities
   if (method == "multilevel") {
     communities <- multilevel.community(G)

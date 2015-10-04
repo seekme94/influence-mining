@@ -1,5 +1,5 @@
 # Project: influence-mining
-### Version: 0.1.1
+### Version: 0.1.2
 
 The purpose of this project is to provide an interface to perform influence mining operations on networks, preferably Social networks.
 
@@ -55,6 +55,21 @@ This function returns a set of nodes, to be used as seed in influence functions 
 - seed_method: see influence function
 
 > Output: subset vector of nodes in a graph
+
+```
+find_communities
+```
+This method finds communities in the given graph and returns the graph after adding a vector "group" to its vertices
+- G: a graph object of library *igraph*
+- method: is the method to generate communities. Available algorithms are "multilevel", "edgebetweenness", "fastgreedy", "eigenvector", "spinglass", "walktrap", "labelpropagation", "clique", "largescale"
+
+> Output: graph object with additional vector "group" to vertices
+
+```
+community.significance.test
+```
+This function performs a Wilcoxon rank-sum test on the "internal" and "external" degrees of a community in order to quantify its significance.
+
 
 ### Examples:
 1. Calculate influence under defaults (model="LT", budget=5, steps=1 and seed_method="random")
