@@ -1,9 +1,5 @@
-#' @author owaishussain@outlook.com
-#' @title R utility to find influence in a network
-#' @
-library(igraph)
-
 #' This function is a wrapper for influence_IC and influence_LT functions
+#' 
 #' @param graph is the igraph object
 #' @param seed (optional) is a set of seed (initial nodes). If NULL, then seed_method parameter should be given
 #' @param budget defines what percentage of most influential nodes out of all nodes is required as output. Default value is 1
@@ -12,11 +8,13 @@ library(igraph)
 #' @param maximize should be TRUE if influential nodes are to be derived using Greedy algorithm
 #' @param seed_method is the selection method for seed (initial nodes). Value can be "random", "degree", "closeness", "betweenness", "coreness", "eigenvector", "a-degree", "a-closeness", "a-betweenness", "a-coreness", "a-eigenvector"
 #' @param prob is the probability of activation of a neighbour node. This is applicable only to IC model currently
+#' @return output containing summary
 #' @examples
 #' influence(G, budget=5, seed=NULL, 5, "LT", maximize=TRUE, seed_method="degree", prob=0.5)
 #' influence(G, budget=5, seed=NULL, 5, "IC", maximize=TRUE, seed_method="degree", prob=0.5)
 #' influence(G, budget=5, seed=c(2,5,9,23), 5, "IC", maximize=FALSE, prob=0.5)
 influence <- function (graph, seed=NULL, budget=1, steps=1, model=c("IC", "LT"), maximize=FALSE, seed_method=c("random", "degree", "closeness", "betweenness", "coreness", "eigenvector", "a-degree", "a-closeness", "a-betweenness", "a-coreness", "a-eigenvector"), prob=0.5) {
+  require(igraph)
   # In case of influence maximization
   if (maximize) {
     influence_max(graph, budget, steps, model, prob=prob)
@@ -37,18 +35,23 @@ influence <- function (graph, seed=NULL, budget=1, steps=1, model=c("IC", "LT"),
   }
 }
 
-# This function implements Greedy algorithm for Influence Maximization
-# "G" is the graph object
-# "budget" defines what percentage of most influential nodes out of all nodes is required as output
-# "steps" is the time steps for which, the diffusion process should run. If exhaustive run is required, provide a high value (like 100)
-# "model" is influence model to run the dataset on. Value MUST either be "LT" or "IC"
-# "prob" is the probability of activation of a neighbour node. This is applicable only to IC model currently
-influence_max <- function(G, budget, steps, model, prob) {
+#' This function implements Greedy algorithm for Influence Maximization
+#' 
+#' @param graph is the igraph object
+#' @param budget defines what percentage of most influential nodes out of all nodes is required as output. Default value is 1
+#' @param steps is the time steps for which, the diffusion process should run. If exhaustive run is required, provide a high value (like 100). Default value is 1
+#' @param model is influence model to run the dataset on. Value MUST either be "LT" or "IC"
+#' @param prob is the probability of activation of a neighbour node. This is applicable only to IC model currently
+#' @return output containing summary
+#' @examples
+#' influence_max(graph, budget=2, steps=5, "LT", prob=0.5)
+#' influence_max(graph, budget=5, steps=99, "IC", prob=0.5)
+influence_max <- function(graph, budget, steps, model, prob) {
   start <- as.numeric(Sys.time())
   # Save list of nodes
-  nodes <- V(G)
+  nodes <- V(graph)
   # Save list of edges
-  edges <- E(G)
+  edges <- E(graph)
   size <- length(nodes) * budget / 100
   influence <- 0
   seed <- NULL
@@ -60,10 +63,10 @@ influence_max <- function(G, budget, steps, model, prob) {
       # Find infuence of node with existing nodes in seed
       output <- NULL
       if (model == "IC") {
-        output <- influence_IC(graph=G, seed=c(seed, node), steps=steps, prob=prob)
+        output <- influence_IC(graph=graph, seed=c(seed, node), steps=steps, prob=prob)
       }
       else if (model == "LT") {
-        output <- influence_LT(graph=G, seed=c(seed, node), steps=steps, threshold=prob)
+        output <- influence_LT(graph=graph, seed=c(seed, node), steps=steps, threshold=prob)
       }
       # If current node causes more influence than maximum so far, then swap
       if (output$influence > max_influence) {
@@ -86,12 +89,14 @@ influence_max <- function(G, budget, steps, model, prob) {
 }
 
 # This function calculates influence of k nodes under Independent Cascade model
-# "graph" is the graph object
-# "seed" is the initial seed passed
-# "steps" is the number of time steps the function should repeat till
-# "prob" is the probability of activation of a neighbour node. This is applicable only to IC model currently
+#' 
+#' @param graph is the igraph object
+#' @param seed is the initial seed nodes passed
+#' @param steps is the time steps for which, the diffusion process should run. If exhaustive run is required, provide a high value (like 100). Default value is 1
+#' @param prob is the probability of activation of a neighbour node. This is applicable only to IC model currently
+#' @return output containing summary
 influence_IC <- function(graph, seed, steps, prob) {
-  # Algorithm: Independent Cascade model takes a network (G) as input and some budget (k).
+  # Algorithm: Independent Cascade model takes a network (graph) as input and some budget (k).
   # From G, k fraction of nodes are initially activated by some method. Next, we attempt to activate more nodes in the neighbourhood of these nodes.
   # Each active node attempts to activate each of its neighbour nodes with a global probability p (this is 0.5 for coin toss method)
   # Whether an attempt succeeds or fails, a node cannot be attempted twice by any of the active neighbours.
@@ -101,9 +106,9 @@ influence_IC <- function(graph, seed, steps, prob) {
   # Read graph from file
   G <- graph
   # Save list of nodes
-  nodes <- V(G)
+  nodes <- V(graph)
   # Save list of edges
-  edges <- E(G)
+  edges <- E(graph)
   influence <- 0
   output <- NULL
   output$initial_seed <- c(seed)
@@ -140,12 +145,14 @@ influence_IC <- function(graph, seed, steps, prob) {
 }
 
 # This function calculates influence of k nodes under Linear Threshold model
-# "graph" is the graph object of igraph library
-# "seed" is the initial seed
-# "steps" is the number of time steps the function should repeat till
-# "threshold" is minimum threshold required to activate a node under observation
+#' 
+#' @param graph is the igraph object
+#' @param seed is the initial seed nodes passed
+#' @param steps is the time steps for which, the diffusion process should run. If exhaustive run is required, provide a high value (like 100). Default value is 1
+#' @param threshold is minimum threshold required to activate a node under observation
+#' @return output containing summary
 influence_LT <- function(graph, seed, steps, threshold) {
-  # Algorithm: Linear Threshold model takes a network (G) as input and some budget (k).
+  # Algorithm: Linear Threshold model takes a network (graph) as input and some budget (k).
   # From G, k fraction of nodes are initially activated randomly. Then we attempt to activate more nodes in the neighbourhood of these nodes.
   # A node v actiates only if sum of weights of its active neighbour nodes equals or exceeds its threshold (assigned randomly here).
   # In the given function, if the fraction of active nodes in neighbourhood equals or exceeds the threshold, the inactive node becomes active
@@ -156,9 +163,9 @@ influence_LT <- function(graph, seed, steps, threshold) {
   # Read graph from file
   G <- graph
   # Save list of nodes
-  nodes <- V(G)
+  nodes <- V(graph)
   # Save list of edges
-  edges <- E(G)
+  edges <- E(graph)
   influence <- 0
   output <- NULL
   output$initial_seed <- c(seed)
@@ -203,43 +210,48 @@ influence_LT <- function(graph, seed, steps, threshold) {
   output
 }
 
-# This function inputs a graph object G, k as percentage and a seed method and returns k% nodes as seed using the method given
-select_seed <- function (G, k, seed_method=c("random", "degree", "closeness", "betweenness", "coreness", "eigenvector", "a-degree", "a-closeness", "a-betweenness", "a-coreness", "a-eigenvector")) {
-  nodes <- V(G)
+#' This function inputs a graph object, percentage and a seed method and returns k% nodes as seed using given method
+#' 
+#' @param graph is the igraph object
+#' @param budget defines what percentage of most influential nodes out of all nodes is required as output. Default value is 1
+#' @param seed_method is the selection method for seed (initial nodes). Value can be "random", "degree", "closeness", "betweenness", "coreness", "eigenvector", "a-degree", "a-closeness", "a-betweenness", "a-coreness", "a-eigenvector"
+#' @return set of nodes
+select_seed <- function (graph, budget, seed_method=c("random", "degree", "closeness", "betweenness", "coreness", "eigenvector", "a-degree", "a-closeness", "a-betweenness", "a-coreness", "a-eigenvector")) {
+  nodes <- V(graph)
   seed <- NULL
   # Calculate the actual number of nodes to select as seed
-  size <- length(nodes) * k / 100
+  size <- length(nodes) * budget / 100
   if (seed_method == "random") {
     # Select random nodes
     seed <- sample(x=nodes, size)
   }
   else if (seed_method == "degree") {
     # Calculate in/out degrees of all nodes
-    degrees <- degree(G, V(G), mode="all", loops=FALSE, normalized=FALSE)
+    degrees <- degree(graph, V(graph), mode="all", loops=FALSE, normalized=FALSE)
     data <- data.frame(node = c(nodes), degree = c(degrees))
     seed <- tail(data[order(data$degree),], size)$node
   }
   else if (seed_method == "closeness") {
     # Calculate in/out closeness of all nodes, normalized between 0 and 1
-    closenesses <- closeness(G, V(G), mode="all", normalized=TRUE)
+    closenesses <- closeness(graph, V(graph), mode="all", normalized=TRUE)
     data <- data.frame(node = c(nodes), closeness = c(closenesses))
     seed <- tail(data[order(data$closeness),], size)$node
   }
   else if(seed_method == "betweenness") {
     # Calculate betweenness centrality (for huge data sets, use betweenness.estimate() and give some max value of path length as cutoff)
-    betweennesses <- betweenness(G, V(G), directed=FALSE)
+    betweennesses <- betweenness(graph, V(graph), directed=FALSE)
     data <- data.frame(node = c(nodes), betweenness = c(betweennesses))
     seed <- tail(data[order(data$betweenness),], size)$node
   }
   else if (seed_method == "coreness") {
     # Calculate in/out closeness of all nodes
-    coreness <- graph.coreness(G, mode="all")
+    coreness <- graph.coreness(graph, mode="all")
     data <- data.frame(node = c(nodes), coreness = c(coreness))
     seed <- tail(data[order(data$coreness),], size)$node
   }
   else if (seed_method == "eigenvector") {
     # Calculate eigenvectors of the graph
-    eigen <- evcent(G, directed=FALSE)
+    eigen <- evcent(graph, directed=FALSE)
     eigenvectors <- eigen$vector
     eigenvalue <- eigen$value
     data <- data.frame(node = c(nodes), eigenvector = c(eigenvectors))
@@ -247,18 +259,18 @@ select_seed <- function (G, k, seed_method=c("random", "degree", "closeness", "b
     seed <- tail(data[order(data$eigenvector),], size)$node
   }
   else if (seed_method %in% c("a-degree", "a-closeness", "a-betweenness", "a-coreness", "a-eigenvector")) {
-    seed <- select_adaptive_seed(G, k, seed_method)
+    seed <- select_adaptive_seed(graph, budget, seed_method)
   }
   seed
 }
 
-## Trying to improve maximization. NOT TESTED
+#' Try to improve maximization. NOT TESTED
 new_influence_max <- function(G, budget, steps, model, prob) {
   start <- as.numeric(Sys.time())
   # Save list of nodes
-  nodes <- V(G)
+  nodes <- V(graph)
   # Save list of edges
-  edges <- E(G)
+  edges <- E(graph)
   size <- length(nodes) * budget / 100
   influence <- 0
   seed <- NULL
@@ -290,10 +302,13 @@ new_influence_max <- function(G, budget, steps, model, prob) {
   out
 }
 
-# This function returns largest connected component in a network
-largest_component <- function(G) {
-  gclust = clusters(G)
-  lcc = induced.subgraph(G, V(G)[which(gclust$membership == which.max(gclust$csize))])
+#' This function returns largest connected component in a network
+#' 
+#' @param graph is the igraph object
+#' @return largest component igraph object
+largest_component <- function(graph) {
+  gclust = clusters(graph)
+  lcc = induced.subgraph(graph, V(graph)[which(gclust$membership == which.max(gclust$csize))])
   lcc
 }
 
@@ -308,33 +323,33 @@ community_influence <- function() {
 find_communities <- function(G, plot=TRUE, method=c("multilevel", "edgebetweenness", "fastgreedy", "eigenvector", "spinglass", "walktrap", "labelpropagation", "clique", "largescale")) {
   # Based on Louvaine's algorithm; better at scaling and avoids formation of super communities
   if (method == "multilevel") {
-    communities <- multilevel.community(G)
-    V(G)$group <- communities$membership
+    communities <- multilevel.community(graph)
+    V(graph)$group <- communities$membership
   }
   else if (method == "edgebetweenness") {
-    communities <- edge.betweenness.community(G)
-    V(G)$group <- communities$membership
+    communities <- edge.betweenness.community(graph)
+    V(graph)$group <- communities$membership
   }
   else if (method == "eigenvector") {
-    communities <- leading.eigenvector.community(G)
-    V(G)$group <- communities$membership
+    communities <- leading.eigenvector.community(graph)
+    V(graph)$group <- communities$membership
   }
   else if (method == "fastgreedy") {
-    communities <- fastgreedy.community(G)
-    members <- community.to.membership(G, communities$merges, steps=which.max(communities$modularity) - 1)
-    V(G)$group <- members$membership
+    communities <- fastgreedy.community(graph)
+    members <- community.to.membership(graph, communities$merges, steps=which.max(communities$modularity) - 1)
+    V(graph)$group <- members$membership
   }
   else if (method == "spinglass") {
-    communities <- spinglass.community(G, spins=10)
-    V(G)$group <- communities$membership
+    communities <- spinglass.community(graph, spins=10)
+    V(graph)$group <- communities$membership
   }
   else if (method == "walktrap") {
-    communities <- walktrap.community(G)
-    members <- community.to.membership(G, communities$merges, steps=which.max(communities$modularity) - 1)
-    V(G)$group <- members$membership
+    communities <- walktrap.community(graph)
+    members <- community.to.membership(graph, communities$merges, steps=which.max(communities$modularity) - 1)
+    V(graph)$group <- members$membership
   }
   else if (method == "labelpropagation") {
-    V(G)$group <- label.propagation.community(G)$membership
+    V(graph)$group <- label.propagation.community(graph)$membership
   }
   else if (method == "clique") {
     
@@ -344,12 +359,12 @@ find_communities <- function(G, plot=TRUE, method=c("multilevel", "edgebetweenne
   }
   # Plot the graph, showing communities
   if (plot) {
-    G$layout <- layout.kamada.kawai
-    size <- length(unique(V(G)$group))
-    V(G)$color <- rainbow(size)[V(G)$group]
-    plot(G)
+    graph$layout <- layout.kamada.kawai
+    size <- length(unique(V(graph)$group))
+    V(graph)$color <- rainbow(size)[V(graph)$group]
+    plot(graph)
   }
-  G
+  graph
 }
 
 # Community detection algorithm by Palla et al.
@@ -420,60 +435,60 @@ community.significance.test <- function(graph, vs, ...) {
   wilcox.test(in.degrees, out.degrees, ...)
 }
 
-# This function inputs a graph object G, k as percentage and a seed method and returns k% nodes as seed using the adaptive method provided
+# This function inputs a igraph object graph, k as percentage and a seed method and returns k% nodes as seed using the adaptive method provided
 # If the network is disconnected, then the function picks only the largest component in each iteration
 
-select_adaptive_seed <- function (G, k, seed_method=c("a-degree", "a-closeness", "a-betweenness", "a-coreness", "a-eigenvector")) {
+select_adaptive_seed <- function (graph, k, seed_method=c("a-degree", "a-closeness", "a-betweenness", "a-coreness", "a-eigenvector")) {
   seed <- NULL
   # Calculate the actual number of nodes to select as seed
-  G <- largest_component(G)
-  size <- length(V(G)) * k / 100
+  graph <- largest_component(graph)
+  size <- length(V(graph)) * k / 100
   if (seed_method == "a-degree") {
     while (length(seed) < size) {
-      degree <- degree(G, V(G), mode="all")
+      degree <- degree(graph, V(graph), mode="all")
       max_node <- which.max(degree)
       seed <- c(seed, max_node)
-      G <- delete.vertices(G, max_node)
-      G <- largest_component(G)
+      graph <- delete.vertices(graph, max_node)
+      graph <- largest_component(graph)
     }
   }
   else if (seed_method == "a-closeness") {
     while (length(seed) < size) {
-      closeness <- closeness(G, V(G), mode="all")
+      closeness <- closeness(graph, V(graph), mode="all")
       max_node <- which.max(closeness)
       seed <- c(seed, max_node)
-      G <- delete.vertices(G, max_node)
-      G <- largest_component(G)
+      graph <- delete.vertices(graph, max_node)
+      graph <- largest_component(graph)
     }
   }
   else if(seed_method == "a-betweenness") {
     while (length(seed) < size) {
-      betweenness <- betweenness(G, V(G))
+      betweenness <- betweenness(graph, V(graph))
       max_node <- which.max(betweenness)
       seed <- c(seed, max_node)
-      G <- delete.vertices(G, max_node)
-      G <- largest_component(G)
+      graph <- delete.vertices(graph, max_node)
+      graph <- largest_component(graph)
     }
   }
   else if (seed_method == "a-coreness") {
     while (length(seed) < size) {
-      coreness <- graph.coreness(G, mode="all")
+      coreness <- graph.coreness(graph, mode="all")
       max_node <- which.max(coreness)
       seed <- c(seed, max_node)
-      G <- delete.vertices(G, max_node)
-      G <- largest_component(G)
+      graph <- delete.vertices(graph, max_node)
+      graph <- largest_component(graph)
     }
   }
   else if (seed_method == "a-eigenvector") {
     while (length(seed) < size) {
       # Calculate eigenvectors of the graph
-      eigen <- evcent(G, directed=FALSE)
+      eigen <- evcent(graph, directed=FALSE)
       eigenvectors <- eigen$vector
       eigenvalue <- eigen$value
       max_node <- which.max(eigenvectors)
       seed <- c(seed, max_node)
-      G <- delete.vertices(G, max_node)
-      G <- largest_component(G)
+      graph <- delete.vertices(graph, max_node)
+      graph <- largest_component(graph)
     }
   }
   seed

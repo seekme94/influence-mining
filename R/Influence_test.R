@@ -2,7 +2,7 @@ library(igraph)
 
 setwd("D:/Datasets/Twitter")
 datasets <- c("obama_edgelist_txt.csv")
-models <- c("LT", "IC")
+models <- c()# c("LT", "IC")
 budgets <- c(0.125, 0.25, 0.5, 1)
 steps <- 1
 probs <- c(0.5)
