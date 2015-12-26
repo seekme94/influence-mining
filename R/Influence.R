@@ -9,14 +9,14 @@ graph_summary <- function(graph, plot=FALSE) {
   o$vertices <- vcount(graph)
   o$vertex_edge_ratio <- o$vertices / o$edges
   o$connected <- is.connected(graph)
-  o$average_degree <- mean(degree(bg))
-  o$average_path_length <- average.path.length(bg)
+  o$average_degree <- mean(degree(graph))
+  o$average_path_length <- average.path.length(graph)
   o$highest_degree <- max(degree(graph))
   o$density <- graph.density(graph)
   o$diameter <- diameter(graph)
-  o$radius <- radius(bg)
+  o$radius <- radius(graph)
   o$transitivity <- transitivity(graph)
-  o$assortativity <- assortativity.degree(bg)
+  o$assortativity <- assortativity.degree(graph)
   if (plot) {
     tkplot(graph)
   }
