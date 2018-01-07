@@ -4,10 +4,9 @@
 # 2. Pick 20% nodes with highest degree from each community
 # 3. Calculate the number of nodes to be picked from each community such that they all sum up to k
 # 4. For each community, run influence function for random groups for max_iteration
-	# If possible combinations is less than max_iterations, then run for all possible combinations (easter egg)
+	# If possible combinations is less than max_iterations, then run for all possible combinations
 # 5. Select the group that performed the best in single iteration from each community
 # 6. Calculate total influence using that set of groups
-
 pareto_maximization <- function(edgesFile, k = 0.1) {
 	# Load the required libraries
 	library(igraph)

@@ -79,7 +79,10 @@ save_graph <- function(file, xlabel, ylabel, params, param_labels) {
 setwd("C:/Users/Owais/OneDrive/Knowledge/PhD/Projects/Influence Mining/Datasets/Snap-facebook/")
 file_name <- "facebook_edges.txt"
 ds <- read.csv(file_name, sep=' ', header=FALSE)
-g <- graph.data.frame(ds, directed=FALSE)  
+g <- graph.data.frame(ds, directed=FALSE)
+summary <- graph_summary(g, FALSE)
+write.table(summary, file="network_properties.txt", sep=',', row.names=FALSE, col.names=TRUE, append=FALSE)
+
 metrics <- c("nodes", "edges", "apl", "transitivity", "avg-degree", "density")
 degree <- resilience(g, metrics, "a-degree")
 betweenness <- resilience(g, metrics, "a-betweenness")
@@ -91,18 +94,30 @@ eigenvector <- resilience(g, metrics, "a-eigenvector")
 param_labels <- c("coreness", "betweenness", "degree", "closeness", "eigenvector")
 params <- list(coreness$nodes, betweenness$nodes, degree$nodes, closeness$nodes, eigenvector$nodes)
 save_graph(file="facebook_nodes.png", xlabel="Steps", ylabel="Nodes", params, param_labels)
+nodes <- params
 # Plot resilience by no. of edges
 params <- list(coreness$edges, betweenness$edges, degree$edges, closeness$edges, eigenvector$edges)
 save_graph(file="facebook_edges.png", xlabel="Steps", ylabel="Edges", params, param_labels)
+edges <- params
 # Plot resilience by average path length
 params <- list(coreness$apl, betweenness$apl, degree$apl, closeness$apl, eigenvector$apl)
 save_graph(file="facebook_apl.png", xlabel="Steps", ylabel="APL", params, param_labels)
+apls <- params
 # Plot resilience by average degree
 params <- list(coreness$avg_degree, betweenness$avg_degree, degree$avg_degree, closeness$avg_degree, eigenvector$avg_degree)
 save_graph(file="facebook_avg_degree.png", xlabel="Steps", ylabel="Avg. Degree", params, param_labels)
+avg_degrees <- params
 # Plot resilience by density
 params <- list(coreness$density, betweenness$density, degree$density, closeness$density, eigenvector$density)
 save_graph(file="facebook_density.png", xlabel="Steps", ylabel="Density", params, param_labels)
+densities <- params
+
+write.table(unlist(nodes), file="nodes.txt", sep=',', row.names=FALSE, col.names=TRUE, append=FALSE)
+write.table(unlist(edges), file="edges.txt", sep=',', row.names=FALSE, col.names=TRUE, append=FALSE)
+write.table(unlist(apls), file="apl.txt", sep=',', row.names=FALSE, col.names=TRUE, append=FALSE)
+write.table(unlist(avg_degrees), file="avg_degree.txt", sep=',', row.names=FALSE, col.names=TRUE, append=FALSE)
+write.table(unlist(densities), file="density.txt", sep=',', row.names=FALSE, col.names=TRUE, append=FALSE)
+
 
 ############################################################
 ########## Twitter Network from Snowball Sampling ##########
@@ -111,6 +126,9 @@ setwd("C:/Users/Owais/OneDrive/Knowledge/PhD/Projects/Influence Mining/Datasets/
 file_name <- "my_twitter_network.csv"
 ds <- read.csv(file_name, sep=' ', header=FALSE)
 g <- graph.data.frame(ds, directed=FALSE)  
+summary <- graph_summary(g, FALSE)
+write.table(summary, file="network_properties.txt", sep=',', row.names=FALSE, col.names=TRUE, append=FALSE)
+
 metrics <- c("nodes", "edges", "apl", "transitivity", "avg-degree", "density")
 degree <- resilience(g, metrics, "a-degree")
 betweenness <- resilience(g, metrics, "a-betweenness")
@@ -120,15 +138,149 @@ eigenvector <- resilience(g, metrics, "a-eigenvector")
 
 param_labels <- c("coreness", "betweenness", "degree", "closeness", "eigenvector")
 params <- list(coreness$nodes, betweenness$nodes, degree$nodes, closeness$nodes, eigenvector$nodes)
-save_graph(file="twitter_nodes.png", xlabel="Steps", ylabel="Nodes", params, param_labels)
+save_graph(file="facebook_nodes.png", xlabel="Steps", ylabel="Nodes", params, param_labels)
+nodes <- params
 params <- list(coreness$edges, betweenness$edges, degree$edges, closeness$edges, eigenvector$edges)
 save_graph(file="twitter_edges.png", xlabel="Steps", ylabel="Edges", params, param_labels)
+edges <- params
 params <- list(coreness$apl, betweenness$apl, degree$apl, closeness$apl, eigenvector$apl)
 save_graph(file="twitter_apl.png", xlabel="Steps", ylabel="APL", params, param_labels)
+apls <- params
 params <- list(coreness$avg_degree, betweenness$avg_degree, degree$avg_degree, closeness$avg_degree, eigenvector$avg_degree)
 save_graph(file="twitter_avg_degree.png", xlabel="Steps", ylabel="Avg. Degree", params, param_labels)
+avg_degrees <- params
 params <- list(coreness$density, betweenness$density, degree$density, closeness$density, eigenvector$density)
 save_graph(file="twitter_density.png", xlabel="Steps", ylabel="Density", params, param_labels)
+densities <- params
+
+write.table(unlist(nodes), file="nodes.txt", sep=',', row.names=FALSE, col.names=TRUE, append=FALSE)
+write.table(unlist(edges), file="edges.txt", sep=',', row.names=FALSE, col.names=TRUE, append=FALSE)
+write.table(unlist(apls), file="apl.txt", sep=',', row.names=FALSE, col.names=TRUE, append=FALSE)
+write.table(unlist(avg_degrees), file="avg_degree.txt", sep=',', row.names=FALSE, col.names=TRUE, append=FALSE)
+write.table(unlist(densities), file="density.txt", sep=',', row.names=FALSE, col.names=TRUE, append=FALSE)
+
+
+#################################################
+########## Protein Network by Barabasi ##########
+#################################################
+setwd("C:/Users/Owais/OneDrive/Knowledge/PhD/Projects/Influence Mining/Datasets/Protein_Barabasi/")
+file_name <- "yeast_barabasi2.txt"
+ds <- read.csv(file_name, sep=' ', header=FALSE)
+g <- graph.data.frame(ds, directed=FALSE)  
+summary <- graph_summary(g, FALSE)
+write.table(summary, file="network_properties.txt", sep=',', row.names=FALSE, col.names=TRUE, append=FALSE)
+
+metrics <- c("nodes", "edges", "apl", "transitivity", "avg-degree", "density")
+degree <- resilience(g, metrics, "a-degree")
+betweenness <- resilience(g, metrics, "a-betweenness")
+closeness <- resilience(g, metrics, "a-closeness")
+coreness <- resilience(g, metrics, "a-coreness")
+eigenvector <- resilience(g, metrics, "a-eigenvector")
+
+param_labels <- c("coreness", "betweenness", "degree", "closeness", "eigenvector")
+params <- list(coreness$nodes, betweenness$nodes, degree$nodes, closeness$nodes, eigenvector$nodes)
+save_graph(file="barabasi_nodes.png", xlabel="Steps", ylabel="Nodes", params, param_labels)
+nodes <- params
+params <- list(coreness$edges, betweenness$edges, degree$edges, closeness$edges, eigenvector$edges)
+save_graph(file="barabasi_edges.png", xlabel="Steps", ylabel="Edges", params, param_labels)
+edges <- params
+params <- list(coreness$apl, betweenness$apl, degree$apl, closeness$apl, eigenvector$apl)
+save_graph(file="barabasi_apl.png", xlabel="Steps", ylabel="APL", params, param_labels)
+apls <- params
+params <- list(coreness$avg_degree, betweenness$avg_degree, degree$avg_degree, closeness$avg_degree, eigenvector$avg_degree)
+save_graph(file="barabasi_avg_degree.png", xlabel="Steps", ylabel="Avg. Degree", params, param_labels)
+avg_degrees <- params
+params <- list(coreness$density, betweenness$density, degree$density, closeness$density, eigenvector$density)
+save_graph(file="barabasi_density.png", xlabel="Steps", ylabel="Density", params, param_labels)
+densities <- params
+
+write.table(unlist(nodes), file="nodes.txt", sep=',', row.names=FALSE, col.names=TRUE, append=FALSE)
+write.table(unlist(edges), file="edges.txt", sep=',', row.names=FALSE, col.names=TRUE, append=FALSE)
+write.table(unlist(apls), file="apl.txt", sep=',', row.names=FALSE, col.names=TRUE, append=FALSE)
+write.table(unlist(avg_degrees), file="avg_degree.txt", sep=',', row.names=FALSE, col.names=TRUE, append=FALSE)
+write.table(unlist(densities), file="density.txt", sep=',', row.names=FALSE, col.names=TRUE, append=FALSE)
+
+
+###########################################
+########## CAIDA Project Network ##########
+###########################################
+setwd("C:/Users/Owais/OneDrive/Knowledge/PhD/Projects/Influence Mining/Datasets/as-caida20071105/")
+file_name <- "as-caida20071105.txt"
+ds <- read.csv(file_name, sep=' ', header=FALSE)
+g <- graph.data.frame(ds, directed=FALSE)
+summary <- graph_summary(g, FALSE)
+write.table(summary, file="network_properties.txt", sep=',', row.names=FALSE, col.names=TRUE, append=FALSE)
+
+metrics <- c("nodes", "edges", "apl", "transitivity", "avg-degree", "density")
+degree <- resilience(g, metrics, "a-degree")
+betweenness <- resilience(g, metrics, "a-betweenness")
+closeness <- resilience(g, metrics, "a-closeness")
+coreness <- resilience(g, metrics, "a-coreness")
+eigenvector <- resilience(g, metrics, "a-eigenvector")
+
+param_labels <- c("coreness", "betweenness", "degree", "closeness", "eigenvector")
+params <- list(coreness$nodes, betweenness$nodes, degree$nodes, closeness$nodes, eigenvector$nodes)
+save_graph(file="caida_nodes.png", xlabel="Steps", ylabel="Nodes", params, param_labels)
+nodes <- params
+params <- list(coreness$edges, betweenness$edges, degree$edges, closeness$edges, eigenvector$edges)
+save_graph(file="caida_edges.png", xlabel="Steps", ylabel="Edges", params, param_labels)
+edges <- params
+params <- list(coreness$apl, betweenness$apl, degree$apl, closeness$apl, eigenvector$apl)
+save_graph(file="caida_apl.png", xlabel="Steps", ylabel="APL", params, param_labels)
+apls <- params
+params <- list(coreness$avg_degree, betweenness$avg_degree, degree$avg_degree, closeness$avg_degree, eigenvector$avg_degree)
+save_graph(file="caida_avg_degree.png", xlabel="Steps", ylabel="Avg. Degree", params, param_labels)
+avg_degrees <- params
+params <- list(coreness$density, betweenness$density, degree$density, closeness$density, eigenvector$density)
+save_graph(file="caida_density.png", xlabel="Steps", ylabel="Density", params, param_labels)
+densities <- params
+
+write.table(unlist(nodes), file="nodes.txt", sep=',', row.names=FALSE, col.names=TRUE, append=FALSE)
+write.table(unlist(edges), file="edges.txt", sep=',', row.names=FALSE, col.names=TRUE, append=FALSE)
+write.table(unlist(apls), file="apl.txt", sep=',', row.names=FALSE, col.names=TRUE, append=FALSE)
+write.table(unlist(avg_degrees), file="avg_degree.txt", sep=',', row.names=FALSE, col.names=TRUE, append=FALSE)
+write.table(unlist(densities), file="density.txt", sep=',', row.names=FALSE, col.names=TRUE, append=FALSE)
+
+
+###############################################
+########## Linux Source Code Network ##########
+###############################################
+setwd("C:/Users/Owais/OneDrive/Knowledge/PhD/Projects/Influence Mining/Datasets/linux/")
+file_name <- "linux_edgelist.txt"
+ds <- read.csv(file_name, sep=' ', header=FALSE)
+g <- graph.data.frame(ds, directed=FALSE)  
+summary <- graph_summary(g, FALSE)
+write.table(summary, file="network_properties.txt", sep=',', row.names=FALSE, col.names=TRUE, append=FALSE)
+
+metrics <- c("nodes", "edges", "apl", "transitivity", "avg-degree", "density")
+degree <- resilience(g, metrics, "a-degree")
+betweenness <- resilience(g, metrics, "a-betweenness")
+closeness <- resilience(g, metrics, "a-closeness")
+coreness <- resilience(g, metrics, "a-coreness")
+eigenvector <- resilience(g, metrics, "a-eigenvector")
+
+param_labels <- c("coreness", "betweenness", "degree", "closeness", "eigenvector")
+params <- list(coreness$nodes, betweenness$nodes, degree$nodes, closeness$nodes, eigenvector$nodes)
+save_graph(file="linux_nodes.png", xlabel="Steps", ylabel="Nodes", params, param_labels)
+nodes <- params
+params <- list(coreness$edges, betweenness$edges, degree$edges, closeness$edges, eigenvector$edges)
+save_graph(file="linux_edges.png", xlabel="Steps", ylabel="Edges", params, param_labels)
+edges <- params
+params <- list(coreness$apl, betweenness$apl, degree$apl, closeness$apl, eigenvector$apl)
+save_graph(file="linux_apl.png", xlabel="Steps", ylabel="APL", params, param_labels)
+apls <- params
+params <- list(coreness$avg_degree, betweenness$avg_degree, degree$avg_degree, closeness$avg_degree, eigenvector$avg_degree)
+save_graph(file="linux_avg_degree.png", xlabel="Steps", ylabel="Avg. Degree", params, param_labels)
+avg_degrees <- params
+params <- list(coreness$density, betweenness$density, degree$density, closeness$density, eigenvector$density)
+save_graph(file="linux_density.png", xlabel="Steps", ylabel="Density", params, param_labels)
+densities <- params
+
+write.table(unlist(nodes), file="nodes.txt", sep=',', row.names=FALSE, col.names=TRUE, append=FALSE)
+write.table(unlist(edges), file="edges.txt", sep=',', row.names=FALSE, col.names=TRUE, append=FALSE)
+write.table(unlist(apls), file="apl.txt", sep=',', row.names=FALSE, col.names=TRUE, append=FALSE)
+write.table(unlist(avg_degrees), file="avg_degree.txt", sep=',', row.names=FALSE, col.names=TRUE, append=FALSE)
+write.table(unlist(densities), file="density.txt", sep=',', row.names=FALSE, col.names=TRUE, append=FALSE)
 
 
 #################################################
@@ -145,6 +297,9 @@ col1 <- unlist(lapply(adjlist,function(x) rep(x[1],length(x)-1))) # establish fi
 col2 <- unlist(lapply(adjlist,"[",-1)) # the second line I actually don't fully understand this command, but it takes the rest of the ID numbers in the character string and transposes it to list vertically
 el <- cbind(col1, col2) # creates the edgelist by combining column 1 and 2.
 g <- graph.edgelist(el)
+summary <- graph_summary(g, FALSE)
+write.table(summary, file="network_properties.txt", sep=',', row.names=FALSE, col.names=TRUE, append=FALSE)
+
 metrics <- c("nodes", "edges", "apl", "transitivity", "avg-degree", "density")
 degree <- resilience(g, metrics, "a-degree")
 betweenness <- resilience(g, metrics, "a-betweenness")
@@ -152,22 +307,28 @@ closeness <- resilience(g, metrics, "a-closeness")
 coreness <- resilience(g, metrics, "a-coreness")
 eigenvector <- resilience(g, metrics, "a-eigenvector")
 
-# Plot resilience by no. of nodes
 param_labels <- c("coreness", "betweenness", "degree", "closeness", "eigenvector")
 params <- list(coreness$nodes, betweenness$nodes, degree$nodes, closeness$nodes, eigenvector$nodes)
 save_graph(file="actor_nodes.png", xlabel="Steps", ylabel="Nodes", params, param_labels)
-# Plot resilience by no. of edges
+nodes <- params
 params <- list(coreness$edges, betweenness$edges, degree$edges, closeness$edges, eigenvector$edges)
 save_graph(file="actor_edges.png", xlabel="Steps", ylabel="Edges", params, param_labels)
-# Plot resilience by average path length
+edges <- params
 params <- list(coreness$apl, betweenness$apl, degree$apl, closeness$apl, eigenvector$apl)
 save_graph(file="actor_apl.png", xlabel="Steps", ylabel="APL", params, param_labels)
-# Plot resilience by average degree
+apls <- params
 params <- list(coreness$avg_degree, betweenness$avg_degree, degree$avg_degree, closeness$avg_degree, eigenvector$avg_degree)
 save_graph(file="actor_avg_degree.png", xlabel="Steps", ylabel="Avg. Degree", params, param_labels)
-# Plot resilience by density
+avg_degrees <- params
 params <- list(coreness$density, betweenness$density, degree$density, closeness$density, eigenvector$density)
 save_graph(file="actor_density.png", xlabel="Steps", ylabel="Density", params, param_labels)
+densities <- params
+
+write.table(unlist(nodes), file="nodes.txt", sep=',', row.names=FALSE, col.names=TRUE, append=FALSE)
+write.table(unlist(edges), file="edges.txt", sep=',', row.names=FALSE, col.names=TRUE, append=FALSE)
+write.table(unlist(apls), file="apl.txt", sep=',', row.names=FALSE, col.names=TRUE, append=FALSE)
+write.table(unlist(avg_degrees), file="avg_degree.txt", sep=',', row.names=FALSE, col.names=TRUE, append=FALSE)
+write.table(unlist(densities), file="density.txt", sep=',', row.names=FALSE, col.names=TRUE, append=FALSE)
 
 
 #########################################################
@@ -177,34 +338,9 @@ setwd("C:/Users/Owais/OneDrive/Knowledge/PhD/Projects/Influence Mining/Datasets/
 file_name <- "author_DBLP_edges.csv"
 ds <- read.csv(file_name, sep=' ', header=FALSE)
 g <- graph.data.frame(ds, directed=FALSE)  
-metrics <- c("nodes", "edges", "apl", "transitivity", "avg-degree", "density")
-degree <- resilience(g, metrics, "a-degree")
-betweenness <- resilience(g, metrics, "a-betweenness")
-closeness <- resilience(g, metrics, "a-closeness")
-coreness <- resilience(g, metrics, "a-coreness")
-eigenvector <- resilience(g, metrics, "a-eigenvector")
+summary <- graph_summary(g, FALSE)
+write.table(summary, file="network_properties.txt", sep=',', row.names=FALSE, col.names=TRUE, append=FALSE)
 
-# Plot resilience by no. of nodes
-param_labels <- c("coreness", "betweenness", "degree", "closeness", "eigenvector")
-params <- list(coreness$nodes, betweenness$nodes, degree$nodes, closeness$nodes, eigenvector$nodes)
-save_graph(file="DBLP_nodes.png", xlabel="Steps", ylabel="Nodes", params, param_labels)
-params <- list(coreness$edges, betweenness$edges, degree$edges, closeness$edges, eigenvector$edges)
-save_graph(file="DBLP_edges.png", xlabel="Steps", ylabel="Edges", params, param_labels)
-params <- list(coreness$apl, betweenness$apl, degree$apl, closeness$apl, eigenvector$apl)
-save_graph(file="DBLP_apl.png", xlabel="Steps", ylabel="APL", params, param_labels)
-params <- list(coreness$avg_degree, betweenness$avg_degree, degree$avg_degree, closeness$avg_degree, eigenvector$avg_degree)
-save_graph(file="DBLP_avg_degree.png", xlabel="Steps", ylabel="Avg. Degree", params, param_labels)
-params <- list(coreness$density, betweenness$density, degree$density, closeness$density, eigenvector$density)
-save_graph(file="DBLP_density.png", xlabel="Steps", ylabel="Density", params, param_labels)
-
-
-###########################################
-########## CAIDA Project Network ##########
-###########################################
-setwd("C:/Users/Owais/OneDrive/Knowledge/PhD/Projects/Influence Mining/Datasets/as-caida20071105/")
-file_name <- "as-caida20071105.txt"
-ds <- read.csv(file_name, sep=' ', header=FALSE)
-g <- graph.data.frame(ds, directed=FALSE)  
 metrics <- c("nodes", "edges", "apl", "transitivity", "avg-degree", "density")
 degree <- resilience(g, metrics, "a-degree")
 betweenness <- resilience(g, metrics, "a-betweenness")
@@ -214,69 +350,26 @@ eigenvector <- resilience(g, metrics, "a-eigenvector")
 
 param_labels <- c("coreness", "betweenness", "degree", "closeness", "eigenvector")
 params <- list(coreness$nodes, betweenness$nodes, degree$nodes, closeness$nodes, eigenvector$nodes)
-save_graph(file="CAIDA_nodes.png", xlabel="Steps", ylabel="Nodes", params, param_labels)
+save_graph(file="dblp_nodes.png", xlabel="Steps", ylabel="Nodes", params, param_labels)
+nodes <- params
 params <- list(coreness$edges, betweenness$edges, degree$edges, closeness$edges, eigenvector$edges)
-save_graph(file="CAIDA_edges.png", xlabel="Steps", ylabel="Edges", params, param_labels)
+save_graph(file="dblp_edges.png", xlabel="Steps", ylabel="Edges", params, param_labels)
+edges <- params
 params <- list(coreness$apl, betweenness$apl, degree$apl, closeness$apl, eigenvector$apl)
-save_graph(file="CAIDA_apl.png", xlabel="Steps", ylabel="APL", params, param_labels)
+save_graph(file="dblp_apl.png", xlabel="Steps", ylabel="APL", params, param_labels)
+apls <- params
 params <- list(coreness$avg_degree, betweenness$avg_degree, degree$avg_degree, closeness$avg_degree, eigenvector$avg_degree)
-save_graph(file="CAIDA_avg_degree.png", xlabel="Steps", ylabel="Avg. Degree", params, param_labels)
+save_graph(file="dblp_avg_degree.png", xlabel="Steps", ylabel="Avg. Degree", params, param_labels)
+avg_degrees <- params
 params <- list(coreness$density, betweenness$density, degree$density, closeness$density, eigenvector$density)
-save_graph(file="CAIDA_density.png", xlabel="Steps", ylabel="Density", params, param_labels)
+save_graph(file="dblp_density.png", xlabel="Steps", ylabel="Density", params, param_labels)
+densities <- params
 
-
-###############################################
-########## Linux Source Code Network ##########
-###############################################
-setwd("C:/Users/Owais/OneDrive/Knowledge/PhD/Projects/Influence Mining/Datasets/linux/")
-file_name <- "linux_edgelist.txt"
-ds <- read.csv(file_name, sep=' ', header=FALSE)
-g <- graph.data.frame(ds, directed=FALSE)  
-metrics <- c("nodes", "edges", "apl", "transitivity", "avg-degree", "density")
-degree <- resilience(g, metrics, "a-degree")
-betweenness <- resilience(g, metrics, "a-betweenness")
-closeness <- resilience(g, metrics, "a-closeness")
-coreness <- resilience(g, metrics, "a-coreness")
-eigenvector <- resilience(g, metrics, "a-eigenvector")
-
-param_labels <- c("coreness", "betweenness", "degree", "closeness", "eigenvector")
-params <- list(coreness$nodes, betweenness$nodes, degree$nodes, closeness$nodes, eigenvector$nodes)
-save_graph(file="linux_nodes.png", xlabel="Steps", ylabel="Nodes", params, param_labels)
-params <- list(coreness$edges, betweenness$edges, degree$edges, closeness$edges, eigenvector$edges)
-save_graph(file="linux_edges.png", xlabel="Steps", ylabel="Edges", params, param_labels)
-params <- list(coreness$apl, betweenness$apl, degree$apl, closeness$apl, eigenvector$apl)
-save_graph(file="linux_apl.png", xlabel="Steps", ylabel="APL", params, param_labels)
-params <- list(coreness$avg_degree, betweenness$avg_degree, degree$avg_degree, closeness$avg_degree, eigenvector$avg_degree)
-save_graph(file="linux_avg_degree.png", xlabel="Steps", ylabel="Avg. Degree", params, param_labels)
-params <- list(coreness$density, betweenness$density, degree$density, closeness$density, eigenvector$density)
-save_graph(file="linux_density.png", xlabel="Steps", ylabel="Density", params, param_labels)
-
-
-#################################################
-########## Protein Network by Barabasi ##########
-#################################################
-setwd("C:/Users/Owais/OneDrive/Knowledge/PhD/Projects/Influence Mining/Datasets/Protein_Barabasi/")
-file_name <- "yeast_barabasi2.txt"
-ds <- read.csv(file_name, sep=' ', header=FALSE)
-g <- graph.data.frame(ds, directed=FALSE)  
-metrics <- c("nodes", "edges", "apl", "transitivity", "avg-degree", "density")
-degree <- resilience(g, metrics, "a-degree")
-betweenness <- resilience(g, metrics, "a-betweenness")
-closeness <- resilience(g, metrics, "a-closeness")
-coreness <- resilience(g, metrics, "a-coreness")
-eigenvector <- resilience(g, metrics, "a-eigenvector")
-
-param_labels <- c("coreness", "betweenness", "degree", "closeness", "eigenvector")
-params <- list(coreness$nodes, betweenness$nodes, degree$nodes, closeness$nodes, eigenvector$nodes)
-save_graph(file="yeast_health_nodes.png", xlabel="Steps", ylabel="Nodes", params, param_labels)
-params <- list(coreness$edges, betweenness$edges, degree$edges, closeness$edges, eigenvector$edges)
-save_graph(file="yeast_health_edges.png", xlabel="Steps", ylabel="Edges", params, param_labels)
-params <- list(coreness$apl, betweenness$apl, degree$apl, closeness$apl, eigenvector$apl)
-save_graph(file="yeast_health_apl.png", xlabel="Steps", ylabel="APL", params, param_labels)
-params <- list(coreness$avg_degree, betweenness$avg_degree, degree$avg_degree, closeness$avg_degree, eigenvector$avg_degree)
-save_graph(file="yeast_health_avg_degree.png", xlabel="Steps", ylabel="Avg. Degree", params, param_labels)
-params <- list(coreness$density, betweenness$density, degree$density, closeness$density, eigenvector$density)
-save_graph(file="yeast_health_density.png", xlabel="Steps", ylabel="Density", params, param_labels)
+write.table(unlist(nodes), file="nodes.txt", sep=',', row.names=FALSE, col.names=TRUE, append=FALSE)
+write.table(unlist(edges), file="edges.txt", sep=',', row.names=FALSE, col.names=TRUE, append=FALSE)
+write.table(unlist(apls), file="apl.txt", sep=',', row.names=FALSE, col.names=TRUE, append=FALSE)
+write.table(unlist(avg_degrees), file="avg_degree.txt", sep=',', row.names=FALSE, col.names=TRUE, append=FALSE)
+write.table(unlist(densities), file="density.txt", sep=',', row.names=FALSE, col.names=TRUE, append=FALSE)
 
 
 #############################################################
@@ -285,7 +378,10 @@ save_graph(file="yeast_health_density.png", xlabel="Steps", ylabel="Density", pa
 setwd("C:/Users/Owais/OneDrive/Knowledge/PhD/Projects/Influence Mining/Datasets/wordnet-words/")
 file_name <- "wordnet-words.txt"
 ds <- read.csv(file_name, sep=' ', header=FALSE)
-g <- graph.data.frame(ds, directed=FALSE)  
+g <- graph.data.frame(ds, directed=FALSE)
+summary <- graph_summary(g, FALSE)
+write.table(summary, file="network_properties.txt", sep=',', row.names=FALSE, col.names=TRUE, append=FALSE)
+
 metrics <- c("nodes", "edges", "apl", "transitivity", "avg-degree", "density")
 degree <- resilience(g, metrics, "a-degree")
 betweenness <- resilience(g, metrics, "a-betweenness")
@@ -296,11 +392,22 @@ eigenvector <- resilience(g, metrics, "a-eigenvector")
 param_labels <- c("coreness", "betweenness", "degree", "closeness", "eigenvector")
 params <- list(coreness$nodes, betweenness$nodes, degree$nodes, closeness$nodes, eigenvector$nodes)
 save_graph(file="wordnet_nodes.png", xlabel="Steps", ylabel="Nodes", params, param_labels)
+nodes <- params
 params <- list(coreness$edges, betweenness$edges, degree$edges, closeness$edges, eigenvector$edges)
 save_graph(file="wordnet_edges.png", xlabel="Steps", ylabel="Edges", params, param_labels)
+edges <- params
 params <- list(coreness$apl, betweenness$apl, degree$apl, closeness$apl, eigenvector$apl)
 save_graph(file="wordnet_apl.png", xlabel="Steps", ylabel="APL", params, param_labels)
+apls <- params
 params <- list(coreness$avg_degree, betweenness$avg_degree, degree$avg_degree, closeness$avg_degree, eigenvector$avg_degree)
 save_graph(file="wordnet_avg_degree.png", xlabel="Steps", ylabel="Avg. Degree", params, param_labels)
+avg_degrees <- params
 params <- list(coreness$density, betweenness$density, degree$density, closeness$density, eigenvector$density)
 save_graph(file="wordnet_density.png", xlabel="Steps", ylabel="Density", params, param_labels)
+densities <- params
+
+write.table(unlist(nodes), file="nodes.txt", sep=',', row.names=FALSE, col.names=TRUE, append=FALSE)
+write.table(unlist(edges), file="edges.txt", sep=',', row.names=FALSE, col.names=TRUE, append=FALSE)
+write.table(unlist(apls), file="apl.txt", sep=',', row.names=FALSE, col.names=TRUE, append=FALSE)
+write.table(unlist(avg_degrees), file="avg_degree.txt", sep=',', row.names=FALSE, col.names=TRUE, append=FALSE)
+write.table(unlist(densities), file="density.txt", sep=',', row.names=FALSE, col.names=TRUE, append=FALSE)
