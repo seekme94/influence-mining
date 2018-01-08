@@ -476,21 +476,15 @@ simulate_lt <- function(graph, active) {
   count
 }
 
-#' This function calculates spread under LT model
-#' @name lt_spread
+#' This function computes resilience of network
+#' @name resilience
 #' @param graph is the weighted igraph object
-#' @param seed is a set of seed (initial nodes)
-#' @param runs is the number of times the loop should run
-#' @return output average spread
+#' @param nodes is a set of nodes to check resilience of
+#' @return number of remaining nodes in largest connected component
 #' @examples
-#' lt_spread(graph, seed=c(2,5,9,23), 5, 10)
+#' resilience(graph, nodes=c(2,5,9,23))
 resilience <- function (graph, nodes) {
+  graph <- delete.vertices(graph, nodes)
   graph <- largest_component(graph)
-  graph <- delete.vertices(graph, which.max(param))
-  graph <- largest_component(graph)
-  size <- vcount(graph)
-  print(size)
-  if (size <= 1)
-    break
-  }
+  vcount(graph)
 }
