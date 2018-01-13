@@ -488,3 +488,77 @@ resilience <- function (graph, nodes) {
   graph <- largest_component(graph)
   vcount(graph)
 }
+
+
+
+
+
+
+
+
+# This function calculates influence of k nodes under Linear Threshold model
+#' @name influence_LT
+#' @param graph is the igraph object
+#' @param seed is the initial seed nodes passed
+#' @param steps is the time steps for which, the diffusion process should run. If exhaustive run is required, provide a high value (like 100). Default value is 1
+#' @param threshold is minimum threshold required to activate a node under observation
+#' @return output containing summary
+influence_LT <- function(graph, seed, steps, threshold) {
+  # Algorithm: Linear Threshold model takes a network (graph) as input and some budget (k).
+  # From G, k fraction of nodes are initially activated randomly. Then we attempt to activate more nodes in the neighbourhood of these nodes.
+  # A node v actiates only if sum of weights of its active neighbour nodes equals or exceeds its threshold (assigned randomly here).
+  # In the given function, if the fraction of active nodes in neighbourhood equals or exceeds the threshold, the inactive node becomes active
+  # The process continues for t steps, in each step, the nodes activated in step t-1 also take part in diffusion process
+  
+  # Save the start time
+  start <- as.numeric(Sys.time())
+  # Read graph from file
+  G <- graph
+  # Save list of nodes
+  nodes <- V(graph)
+  # Save list of edges
+  edges <- E(graph)
+  influence <- 0
+  output <- NULL
+  output$initial_seed <- c(seed)
+  attempted <- seed
+  activated <- NULL
+  for (t in 1:steps) {
+    # If all nodes have been attempted, then break
+    if (length(attempted) >= length(nodes) - length(seed)) {
+      break
+    }
+    active <- NULL
+    # Select all nodes having at least one neighbour in seed nodes
+    inactive <- unlist(lapply(seed, function(seed) {neighbors(G, seed)}))
+    # Remove nodes that have already been attempted
+    inactive <- setdiff(inactive, attempted)
+    # Filter out duplicates
+    inactive <- unique(inactive)
+    for (u in inactive) {
+      # Every seed node in the neighbourhood will attempt to activate u with probability p
+      neighbours <- neighbors(G, u)
+      active_neighbours <- intersect(neighbours, seed)
+      if (length(neighbours) == 0) {
+        next
+      }
+      # If ratio of active nodes in neighbourhood of u is greater than or equal to threshold, then activate u
+      ratio <- (length(active_neighbours) / length(neighbours))
+      if (ratio >= threshold) {
+        active <- c(active, u)
+      }
+      # Active or not, this node has been attempted
+      attempted <- c(attempted, u)
+    }
+    #print (paste("Attempted on in this step:", length(inactive), "Activated:", length(active)))
+    activated <- c(activated, active)
+    seed <- active
+  }
+  end <- as.numeric (Sys.time())
+  # Summary
+  output$nodes <- length(nodes)
+  output$edges <- length(edges)
+  output$influence <- length(activated)
+  output$time <- (end - start)
+  output
+}

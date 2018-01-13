@@ -116,7 +116,7 @@ generate_small_world <- function(size, probability=0.1, directed=FALSE, allow_cy
 }
 
 #' This function generates a Barabasi scale-free graph
-#' @name generate_ring
+#' @name generate_scale_free
 #' @param size is the number of nodes
 #' @param preference is the power of preferencial attachment. Default is linear, i.e. 1
 #' @param directed generates directed graph when TRUE. Default value is FALSE
@@ -125,18 +125,6 @@ generate_small_world <- function(size, probability=0.1, directed=FALSE, allow_cy
 generate_scale_free <- function(size, preference=1, directed=FALSE, allow_cycles=FALSE) {
   require(igraph)
   barabasi.game(size, power=preference, directed=directed)
-}
-
-#' This function generates a Barabasi scale-free graph
-#' @name generate_ring
-#' @param size is the number of nodes
-#' @param preference is the power of preferencial attachment. Default is linear, i.e. 1
-#' @param directed generates directed graph when TRUE. Default value is FALSE
-#' @param allow_cycles produces loops in the graph when TRUE. Default value is FALSE
-#' @return igraph object
-generate_watts_strgatz <- function(size, preference=1, directed=FALSE, allow_cycles=FALSE) {
-  require(igraph)
-  # TODO
 }
 
 #' Holme-Kim Network
@@ -151,72 +139,11 @@ generate_watts_strgatz <- function(size, preference=1, directed=FALSE, allow_cyc
 #' @examples x <- generate_holme_kim (1000, 20, 0.1)}
 #' @references Holme, Petter, and Beom Jun Kim. "Growing scale-free networks with tunable clustering."Physical review E65, no. 2 (2002): 026107.
 #' @export
-generate_holme_kim <- function(size, m, triad_prob=0.1) {
-  neilist <- list()
-  neilist[size] <- list(NULL)
-  neilist[[m + 1]] <- seq(m)
-  for ( k in seq(m)) {
-    neilist[[k]] <- m + 1
-  }
-  df <- c( rep(1, m), m, rep(0, size-m-1))
-  for (i in (m + 2) : size) {
-    pa.neighbor <- sample(seq(size), 1, prob = df)
-    neilist[[i]] <- pa.neighbor
-    neilist[[pa.neighbor]] <- c(neilist[[pa.neighbor]], i)
-    df[pa.neighbor] <- df[pa.neighbor] + 1
-    for (j in seq(2, m) ) {
-      pool <- setdiff( neilist[[pa.neighbor]], c(i, neilist[[i]]) )
-      if (stats::runif(1) <= triad_prob && length(pool) != 0) {
-        tf.neighbor <- sample(pool, 1)
-        neilist[[i]] <- c(neilist[[i]], tf.neighbor)
-        neilist[[tf.neighbor]] = c(neilist[[tf.neighbor]], i)
-        df[tf.neighbor] <- df[tf.neighbor] + 1
-      } else {
-        pa.neighbor <- sample(seq(size)[-neilist[[i]]], 1, prob = df[-neilist[[i]]] )
-        neilist[[i]] <- c(neilist[[i]], pa.neighbor)
-        neilist[[pa.neighbor]] <- c(neilist[[pa.neighbor]], i)
-        df[pa.neighbor] <- df[pa.neighbor] + 1
-      }
-    }
-    df[i] <- m
-  }
-  neilist
-}
-
-#' This function plots degree distribution of given graph
-plot_degree_distribution <- function(graph) {
-  degree = degree(graph, mode="all")
-  distribution = degree.distribution(graph, mode="all", cumulative=FALSE)
-  degree = 1:max(degree)
-  probability = distribution[-1]
-  # Remove blank values
-  nonzero.position = which(probability != 0)
-  probability = probability[nonzero.position]
-  degree = degree[nonzero.position]
-  # plot
-  plot(probability ~ degree, log="xy", xlab="Degree (log)", ylab="Probability (log)", col=1, main="Degree Distribution")
-}
-
-fit_power_law = function(graph) {
-  degree = degree(graph, mode="all")
-  distribution = degree.distribution(graph, mode="all", cumulative=FALSE)
-  degree = 1:max(degree)
-  probability = distribution[-1]
-  # Remove blank values
-  nonzero.position = which(probability != 0)
-  probability = probability[nonzero.position]
-  degree = degree[nonzero.position]
-  # Logistic regression model
-  reg = lm(log(probability) ~ log(degree))
-  coef = coef(reg)
-  power.law.fit = function(x) exp(coef[[1]] + coef[[2]] * log(x))
-  alpha = -coef[[2]]
-  R.square = summary(reg)$r.squared
-  print(paste("Alpha =", round(alpha, 3)))
-  print(paste("R square =", round(R.square, 3)))
-  # plot
-  plot(probability ~ degree, log="xy", xlab="Degree (log)", ylab="Probability (log)", col=1, main="Degree Distribution")
-  curve(power.law.fit, col="red", add=T, n=length(degree))
+generate_holme_kim <- function(size, m, triad_prob=0.1, directed=FALSE) {
+  library(fastnet)
+  hk <- net.holme.kim(size, m, triad_prob)
+  mode <- ifelse(directed, "in", "total")
+  graph.adjlist(hk, mode="total")
 }
 
 #' This function returns largest connected component in a network
