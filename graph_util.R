@@ -24,6 +24,8 @@ graph_summary <- function(graph, plot=FALSE) {
 }
 
 #' This function plots degree distribution of given graph
+#' @name plot_degree_distribution
+#' @param graph is the igraph object
 plot_degree_distribution <- function(graph) {
   degree = degree(graph, mode="all")
   distribution = degree.distribution(graph, mode="all", cumulative=FALSE)
@@ -37,6 +39,9 @@ plot_degree_distribution <- function(graph) {
   plot(probability ~ degree, log="xy", xlab="Degree (log)", ylab="Probability (log)", col=1, main="Degree Distribution")
 }
 
+#' This function plots power law to given graph
+#' @name fit_power_law
+#' @param graph is the igraph object
 fit_power_law = function(graph) {
   degree = degree(graph, mode="all")
   distribution = degree.distribution(graph, mode="all", cumulative=FALSE)

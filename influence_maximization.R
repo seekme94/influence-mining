@@ -43,7 +43,7 @@ influence <- function (graph, seed=NULL, budget=1, steps=1, model=c("IC", "LT"),
   }
 }
 
-#' This function implements Greedy algorithm for Influence Maximization
+#' This function implements optimal algorithm for Influence Maximization
 #' @name optimal_maximization
 #' @param graph is the igraph object
 #' @param budget defines what percentage of most influential nodes out of all nodes is required as output. Default value is 1
@@ -257,7 +257,7 @@ influence_ic <- function(graph, seed, steps, prob) {
     }
     seed <- active
     #print(c("Active in step", t, "=", length(active)))
-    influence <- influence + length(seed)
+    influence <- influence + length(active)
   }
   end <- as.numeric (Sys.time())
   # Summary
@@ -488,11 +488,6 @@ resilience <- function (graph, nodes) {
   graph <- largest_component(graph)
   vcount(graph)
 }
-
-
-
-
-
 
 
 
