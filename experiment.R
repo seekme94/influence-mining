@@ -11,7 +11,8 @@ source('./influence_maximization.R')
 
 size <- 50
 budget <- size * 0.1
-prob <- 0.25
+prob <- 1/budget
+steps <- round(sqrt(size)) # Since influence drops exponentially, therefore below this range, it will be negligible
 
 # Generate several graphs of various types
 random <- generate_random(size, prob)
@@ -22,27 +23,35 @@ sf <- generate_scale_free(size, preference=1)
 sw <- generate_small_world(size, prob)
 hk <- generate_holme_kim(size, budget, prob)
 
-# GREEDY ALGORITHM
-greedy <- greedy_influence(random, budget, 99, "LT", prob)
-
-
 # On random networks
-combinations <- getall(iterpc(vcount(random), budget))
-# Bind another column to store influence spread
-combinations <- cbind(combinations, 0)
-nrow(combinations)
 graph <- random
-max_spread <- 0
-for (i in sample(1:nrow(combinations), 100) ) {
+combinations <- getall(iterpc(vcount(graph), budget))
+# Bind another column to store influence spread under IC
+combinations <- cbind(combinations, 0)
+# Bind another column to store influence spread under LT
+combinations <- cbind(combinations, 0)
+max_spread_ic <- 0
+max_spread_lt <- 0
+samples <- sample(1:nrow(combinations), 500) # This is to limit the number of trials
+# Loop for each combination in the sample
+for (i in samples) {
   seed <- combinations[i, 1:budget]
-  #  spread <- ic_spread(graph, V(graph)[seed], length(seed))
-  spread <- influence_ic(graph, seed, budget, prob)$influence
-  combinations[i,(budget + 1)] <- spread
-  if (spread > max_spread) {
-    max_spread <- spread
-    print(max_spread)
+  # Calculte the spread under IC model
+  spread_ic <- influence_ic(graph, seed, budget, 0.5)$influence
+  combinations[i,(budget + 1)] <- spread_ic
+  if (spread_ic > max_spread_ic) {
+    max_spread_ic <- spread_ic
   }
+  
+  # Calculte the spread under LT model
+  spread_lt <- influence_lt(graph, seed, steps, 0.5)$influence
+  combinations[i,(budget + 2)] <- spread_lt
+  if (spread_lt > max_spread_lt) {
+    max_spread_lt <- spread_lt
+  }
+  print(paste("Max IC spread:", max_spread_ic, "Max LT spread:", max_spread_lt))
 }
+
 
 #################################
 
@@ -67,27 +76,3 @@ hk_node_uuids <- sapply(V(hk), function(x) save_node(db, get_graph_id(db, hk_uui
 dbDisconnect(db)
 dbListConnections(MySQL())
 
-
-start <- as.numeric(Sys.time())
-cores <- detectCores() - 1
-cl <- makeCluster(cores)
-registerDoMC(cl)
-max_spread <- 0
-# foreach requires us to define each packages and function name used within it
-foreach (i = 1:800000, .packages=c("igraph"), .export=c("ic_spread","simulate_ic")) %dopar% {
-  seed <- combinations[i, 1:budget]
-  # Compute average spread under IC model in multiple runs
-  spread <- ic_spread(graph, V(graph)[seed], length(seed))
-  # Save spread to last column
-  combinations[i,(budget + 1)] <- spread
-  if (spread > max_spread) {
-    max_spread <- spread
-  }
-}
-# Unregister cluster
-registerDoSEQ()
-stopCluster(cl)
-end <- as.numeric(Sys.time())
-print(end - start)
-
-max_spread
