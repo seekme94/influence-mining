@@ -1,3 +1,12 @@
+#' This function should be called before any other
+setup <- function(logging=TRUE) {
+  if (logging) {
+    require(logging)
+    basicConfig()
+    addHandler(writeToFile, logger="influence_maximization", file="output.log")
+  }
+}
+
 #' This function is a wrapper for influence_ic and influence_lt functions
 #' @name influence
 #' @param graph is the igraph object
@@ -6,6 +15,7 @@
 #' @param steps is the time steps for which, the diffusion process should run. If exhaustive run is required, provide a high value (like 100). Default value is 1
 #' @param model is influence model to run the dataset on. Value MUST either be "LT" or "IC"
 #' @param maximize should be TRUE if influential nodes are to be derived using Greedy algorithm
+#' @param optimal_solution should be TRUE if influential nodes are to be derived using optimal algorithm. Caution! This is the slowest apporach
 #' @param seed_method is the selection method for seed (initial nodes). Value can be "random", "degree", "closeness", "betweenness", "coreness", "eigenvector", "a-degree", "a-closeness", "a-betweenness", "a-coreness", "a-eigenvector"
 #' @param prob is the probability of activation of a neighbour node. This is applicable only to IC model currently
 #' @param parallel when true, executes the funtion using multiple CPU cores. Default value is FALSE
@@ -14,7 +24,8 @@
 #' influence(G, budget=5, seed=NULL, 5, "LT", maximize=TRUE, seed_method="degree", prob=0.5)
 #' influence(G, budget=5, seed=NULL, 5, "IC", maximize=TRUE, seed_method="degree", prob=0.5)
 #' influence(G, budget=5, seed=c(2,5,9,23), 5, "IC", maximize=FALSE, prob=0.5)
-influence <- function (graph, seed=NULL, budget=1, steps=1, model=c("IC", "LT"), maximize=FALSE, seed_method=c("random", "degree", "closeness", "betweenness", "coreness", "eigenvector", "a-degree", "a-closeness", "a-betweenness", "a-coreness", "a-eigenvector"), prob=0.5, parallel=FALSE) {
+influence <- function (graph, seed=NULL, budget=1, steps=1, model=c("IC", "LT"), maximize=FALSE, optimal_solution=FALSE, seed_method=c("random", "degree", "closeness", "betweenness", "coreness", "eigenvector", "a-degree", "a-closeness", "a-betweenness", "a-coreness", "a-eigenvector"), prob=0.5, parallel=FALSE) {
+  loginfo(paste("influence function parameters: seed=", seed, ", budget=", budget, ", steps=", steps, ",model=", model, ", maximize=", maximize, ", optimal_solution=", optimal_solution, ", seed_method=", seed_method, ", prob=", prob, ", parallel=", parallel, sep=''))
   require(igraph)
   if (parallel) {
     require(snow)
@@ -25,7 +36,12 @@ influence <- function (graph, seed=NULL, budget=1, steps=1, model=c("IC", "LT"),
   }
   # In case of influence maximization
   if (maximize) {
-    greedy_influence(graph, budget, steps, model, prob=prob, parallel=parallel)
+    if (optimal_solution) {
+      optimal_maximization(graph, seed_size=budget, runs=steps, model=model, parallel=parallel)
+    }
+    else {
+      greedy_influence(graph, budget, steps, model, prob=prob, parallel=parallel)
+    }
   }
   else {
     # Initially, select budget% seed nodes if not provided
@@ -56,35 +72,51 @@ influence <- function (graph, seed=NULL, budget=1, steps=1, model=c("IC", "LT"),
 #' greedy_influence(graph, budget=2, steps=5, "LT", prob=0.5)
 #' greedy_influence(graph, budget=5, steps=99, "IC", prob=0.5)
 optimal_maximization <- function(graph, seed_size, runs=3, model=c("IC", "LT"), parallel=FALSE) {
+  require(iterpc)
   start <- as.numeric(Sys.time())
-  combinations <- combn(x=V(graph), m=seed_size)
-  # Transpose
-  combinations <- t(combinations)
+  # Get all combinations
+  loginfo("Creating combinations")
+  combinations <- getall(iterpc(vcount(graph), seed_size))
   # Add another column to store total spread
   combinations <- cbind(combinations, 0)
   if (parallel) {
+    loginfo("Executing optimal_maximization in parallel")
     require(parallel)
-    cores <- detectCores() - 1
     require(foreach)
+    require(doSNOW) # For linux, use doMC package instead
+    cores <- detectCores() - 1
     cl <- makeCluster(cores)
-    require(doSNOW)
     registerDoSNOW(cl)
+    loginfo(paste("Calculating spread under", model))
     # foreach requires us to define each packages and function name used within it
     foreach (i = 1:nrow(combinations), .packages=c("igraph"), .export=c("ic_spread","simulate_ic")) %dopar% {
       seed <- combinations[i,1:seed_size]
-      # Compute average spread under IC model in multiple runs
-      spread <- ic_spread(graph, seed, candidate=NULL, runs)
+      if (model == "IC") {
+        # Compute spread under IC model in multiple runs
+        spread <- ic_spread(graph, seed, candidate=NULL, runs)
+      }
+      else if (model == "LT") {
+        # Compute spread under LT model in multiple runs
+        spread <- lt_spread(graph, seed, candidate=NULL, runs)
+      }
       # Save spread to last column
       combinations[i,(seed_size + 1)] <- spread
     }
     # Unregister cluster
     registerDoSEQ()
     stopCluster(cl)
-  } else {
+  }
+  else {
     for (i in 1:nrow(combinations)) {
       seed <- combinations[i,1:seed_size]
-      # Compute average spread under IC model in multiple runs
-      spread <- ic_spread(graph, seed, candidate=NULL, runs)
+      if (model == "IC") {
+        # Compute spread under IC model in multiple runs
+        spread <- ic_spread(graph, seed, candidate=NULL, runs)
+      }
+      else if (model == "LT") {
+        # Compute spread under LT model in multiple runs
+        spread <- lt_spread(graph, seed, candidate=NULL, runs)
+      }
       # Save spread to last column
       combinations[i,(seed_size + 1)] <- spread
     }
@@ -489,71 +521,3 @@ resilience <- function (graph, nodes) {
   vcount(graph)
 }
 
-
-
-# This function calculates influence of k nodes under Linear Threshold model
-#' @name influence_LT
-#' @param graph is the igraph object
-#' @param seed is the initial seed nodes passed
-#' @param steps is the time steps for which, the diffusion process should run. If exhaustive run is required, provide a high value (like 100). Default value is 1
-#' @param threshold is minimum threshold required to activate a node under observation
-#' @return output containing summary
-influence_LT <- function(graph, seed, steps, threshold) {
-  # Algorithm: Linear Threshold model takes a network (graph) as input and some budget (k).
-  # From G, k fraction of nodes are initially activated randomly. Then we attempt to activate more nodes in the neighbourhood of these nodes.
-  # A node v actiates only if sum of weights of its active neighbour nodes equals or exceeds its threshold (assigned randomly here).
-  # In the given function, if the fraction of active nodes in neighbourhood equals or exceeds the threshold, the inactive node becomes active
-  # The process continues for t steps, in each step, the nodes activated in step t-1 also take part in diffusion process
-  
-  # Save the start time
-  start <- as.numeric(Sys.time())
-  # Read graph from file
-  G <- graph
-  # Save list of nodes
-  nodes <- V(graph)
-  # Save list of edges
-  edges <- E(graph)
-  influence <- 0
-  output <- NULL
-  output$initial_seed <- c(seed)
-  attempted <- seed
-  activated <- NULL
-  for (t in 1:steps) {
-    # If all nodes have been attempted, then break
-    if (length(attempted) >= length(nodes) - length(seed)) {
-      break
-    }
-    active <- NULL
-    # Select all nodes having at least one neighbour in seed nodes
-    inactive <- unlist(lapply(seed, function(seed) {neighbors(G, seed)}))
-    # Remove nodes that have already been attempted
-    inactive <- setdiff(inactive, attempted)
-    # Filter out duplicates
-    inactive <- unique(inactive)
-    for (u in inactive) {
-      # Every seed node in the neighbourhood will attempt to activate u with probability p
-      neighbours <- neighbors(G, u)
-      active_neighbours <- intersect(neighbours, seed)
-      if (length(neighbours) == 0) {
-        next
-      }
-      # If ratio of active nodes in neighbourhood of u is greater than or equal to threshold, then activate u
-      ratio <- (length(active_neighbours) / length(neighbours))
-      if (ratio >= threshold) {
-        active <- c(active, u)
-      }
-      # Active or not, this node has been attempted
-      attempted <- c(attempted, u)
-    }
-    #print (paste("Attempted on in this step:", length(inactive), "Activated:", length(active)))
-    activated <- c(activated, active)
-    seed <- active
-  }
-  end <- as.numeric (Sys.time())
-  # Summary
-  output$nodes <- length(nodes)
-  output$edges <- length(edges)
-  output$influence <- length(activated)
-  output$time <- (end - start)
-  output
-}
