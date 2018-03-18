@@ -1,0 +1,2 @@
+"graph_id" "experiment" "results" "description" "uuid"
+"1" 2 "Resilience experiment on Random graph" "{\"time\":\"39.8757412433624\",\"resilience\":\"43\",\"nodes\":{}}" "Sun Mar 18 01:24:43 2018" "bef1ff94-3a49-43c5-82c6-15a40caed59a"

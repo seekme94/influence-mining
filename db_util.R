@@ -1,3 +1,4 @@
+#' Get MySQL connection
 get_connection <- function() {
   require(RMySQL)
   db_user <- 'root'
@@ -8,6 +9,7 @@ get_connection <- function() {
   dbConnect(MySQL(), user=db_user, password=db_password, dbname=db_name, host=db_host, port=db_port)
 }
 
+#' Get ID of graph from given UUID
 get_graph_id <- function(db, uuid) {
   query <- paste("select graph_id from graph where uuid = '", uuid, "'", sep='')
   rs <- dbSendQuery(db, query)
@@ -16,6 +18,7 @@ get_graph_id <- function(db, uuid) {
   max(id)
 }
 
+#' Save graph in graph table with its key attributes
 save_graph <- function(db, graph, graph_type, synthetic=FALSE, source_code) {
   require(igraph)
   require(uuid)
@@ -41,6 +44,7 @@ save_graph <- function(db, graph, graph_type, synthetic=FALSE, source_code) {
   uuid
 }
 
+#' Save node in node table with its key attributes
 save_node <- function(db, graph_id, graph, node) {
   require(igraph)
   require(uuid)
@@ -56,6 +60,7 @@ save_node <- function(db, graph_id, graph, node) {
   uuid
 }
 
+#' Save experiment with results (in JSON) in experiment table
 save_experiment <- function(db, graph_id, experiment, results, description) {
   require(igraph)
   require(uuid)

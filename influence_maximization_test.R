@@ -22,7 +22,7 @@ combinations <- cbind(combinations, 0)
 combinations <- cbind(combinations, 0)
 max_spread_ic <- 0
 max_spread_lt <- 0
-samples <- sample(1:nrow(combinations), 100000)
+samples <- sample(1:nrow(combinations), 1000)
 for (i in samples) {
   seed <- combinations[i, 1:budget]
   spread_ic <- influence_ic(graph, seed, budget, 0.5)$influence
