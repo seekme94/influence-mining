@@ -40,7 +40,12 @@ influence <- function (graph, seed=NULL, budget=1, steps=1, model=c("IC", "LT"),
       optimal_maximization(graph, seed_size=budget, runs=steps, model=model, parallel=parallel)
     }
     else {
-      greedy_influence(graph, budget, steps, model, prob=prob, parallel=parallel)
+      if (parallel) {
+        greedy_influence(graph, budget, steps, model, prob=prob)
+      }
+      else {
+        greedy_influence_parallel(graph, budget, steps, model, prob=prob)
+      }
     }
   }
   else {

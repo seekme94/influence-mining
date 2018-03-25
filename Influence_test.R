@@ -5,16 +5,18 @@ source('./influence_maximization.R')
 source('./community_detection.R')
 
 ### Test Influence spread by multiple trials ###
-graph <- read.graph("sample_edgelist.txt", format="ncol", directed=TRUE)
+graph <- read.graph("Experiments/sample_edgelist.txt", format="ncol", directed=TRUE)
 # Set seed nodes
 seed <- c(2,4,8,9)
 # Compute spread of influence under IC model for given seed set
-ic_spread(graph, seed, candidate=NULL, runs=10)
+ic_spread(graph, seed, runs=10)
 # Compute spread of influence, providing best node under IC model for given seed set
-ic_spread_plus(graph, seed, candidate=NULL, runs=10, best_node=9)
+ic_spread_plus(graph, seed, runs=10, best_node=9)
 
 ### Influence maximization (all combinations)
-combinations <- NULL
+setup()
+combinations <- influence(graph, budget=5, seed=NULL, 5, "LT", maximize=TRUE, seed_method="degree", prob=0.5, parallel=FALSE)
+
 combinations <- influence_maximization(graph, seed_size=2, runs=2, parallel=FALSE)
 
 greedy <- influence_max_greedy(graph=graph, budget=10, steps=10, model="IC", prob=0.3)
@@ -24,7 +26,7 @@ greedy <- influence_max_greedy_parallel(graph=graph, budget=10, steps=10, model=
 greedy
 
 #setwd("D:/Datasets/Twitter")
-datasets <- c("sample_edgelist.txt")
+datasets <- c("Experiments/sample_edgelist.txt")
 models <- c("IC") # c("IC", "LT")
 methods <- c("random", "degree", "closeness", "betweenness", "coreness", "eigenvector", "a-degree", "a-closeness", "a-betweenness", "a-coreness", "a-eigenvector")
 methods <- c("random", "degree", "closeness", "betweenness")

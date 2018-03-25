@@ -12,3 +12,4 @@ vignettes/*.pdf
 .RData
 .RData
 .RDataTmp
+*.out
