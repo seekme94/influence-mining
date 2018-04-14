@@ -5,8 +5,8 @@
 library(igraph)
 library(RMySQL)
 library(parallel)
-#library(snow) # For linux
-library(doSNOW) # For windows
+library(snow) # For linux
+#library(doSNOW) # For windows
 library(foreach)
 library(iterpc)
 library(jsonlite)
@@ -53,9 +53,10 @@ get_resiliences <- function(combinations, graph, budget, parallel=FALSE) {
   resiliences <- NULL
   if (parallel) {
     # Initiate parallel processing
-    cores <- detectCores() - 2
+    cores <- detectCores() - 1
     cl <- makeCluster(cores)
-    registerDoSNOW(cl)
+    #registerDoSNOW(cl)
+    registerDoSEQ()
     # Loop for each combination in the sample
     resiliences <- foreach (i = samples, .packages=c("igraph"), .export=c("resilience","largest_component")) %dopar% {
       # Pick a random sample
@@ -79,11 +80,11 @@ get_resiliences <- function(combinations, graph, budget, parallel=FALSE) {
 
 # Define parameters
 # Repeat experiement for multiple sizes
-sizes <- c(30, 35)
+sizes <- c(50, 55)
 # Repeat experiement 4 times
-#seeds <- c(1, 30, 600, 9000)
-seeds <- c(1)
-parallel <- FALSE
+seeds <- c(1, 30, 600, 9000)
+#seeds <- c(1)
+parallel <- TRUE
 
 for (size in sizes) {
   budget <- size * 0.1

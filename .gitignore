@@ -7,9 +7,6 @@
 # produced vignettes
 vignettes/*.html
 vignettes/*.pdf
-.Rproj.user
-.RData
-.RData
-.RData
-.RDataTmp
-*.out
+*.Rproj.user
+*.RData
+*.RDataTmp
