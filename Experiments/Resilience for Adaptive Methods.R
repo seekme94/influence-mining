@@ -1,7 +1,7 @@
 library(igraph)
 
 # Resillience of network: how fast a network goes down when nodes go down
-resilience <- function(graph, metrics=c("nodes", "edges", "apl", "transitivity", "avg-degree", "density"), seed_method=c("a-degree", "a-closeness", "a-betweenness", "a-coreness", "a-eigenvector")) {
+calculate_resilience <- function(graph, metrics=c("nodes", "edges", "apl", "transitivity", "avg-degree", "density"), seed_method=c("a-degree", "a-closeness", "a-betweenness", "a-coreness", "a-eigenvector")) {
   graph <- largest_component(graph)
   nodes <- NULL
   edges <- NULL
@@ -84,30 +84,30 @@ summary <- graph_summary(g, FALSE)
 write.table(summary, file="network_properties.txt", sep=',', row.names=FALSE, col.names=TRUE, append=FALSE)
 
 metrics <- c("nodes", "edges", "apl", "transitivity", "avg-degree", "density")
-degree <- resilience(g, metrics, "a-degree")
-betweenness <- resilience(g, metrics, "a-betweenness")
-closeness <- resilience(g, metrics, "a-closeness")
-coreness <- resilience(g, metrics, "a-coreness")
-eigenvector <- resilience(g, metrics, "a-eigenvector")
+degree <- calculate_resilience(g, metrics, "a-degree")
+betweenness <- calculate_resilience(g, metrics, "a-betweenness")
+closeness <- calculate_resilience(g, metrics, "a-closeness")
+coreness <- calculate_resilience(g, metrics, "a-coreness")
+eigenvector <- calculate_resilience(g, metrics, "a-eigenvector")
 
-# Plot resilience by no. of nodes
+# Plot calculate_resilience by no. of nodes
 param_labels <- c("coreness", "betweenness", "degree", "closeness", "eigenvector")
 params <- list(coreness$nodes, betweenness$nodes, degree$nodes, closeness$nodes, eigenvector$nodes)
 save_graph(file="facebook_nodes.png", xlabel="Steps", ylabel="Nodes", params, param_labels)
 nodes <- params
-# Plot resilience by no. of edges
+# Plot calculate_resilience by no. of edges
 params <- list(coreness$edges, betweenness$edges, degree$edges, closeness$edges, eigenvector$edges)
 save_graph(file="facebook_edges.png", xlabel="Steps", ylabel="Edges", params, param_labels)
 edges <- params
-# Plot resilience by average path length
+# Plot calculate_resilience by average path length
 params <- list(coreness$apl, betweenness$apl, degree$apl, closeness$apl, eigenvector$apl)
 save_graph(file="facebook_apl.png", xlabel="Steps", ylabel="APL", params, param_labels)
 apls <- params
-# Plot resilience by average degree
+# Plot calculate_resilience by average degree
 params <- list(coreness$avg_degree, betweenness$avg_degree, degree$avg_degree, closeness$avg_degree, eigenvector$avg_degree)
 save_graph(file="facebook_avg_degree.png", xlabel="Steps", ylabel="Avg. Degree", params, param_labels)
 avg_degrees <- params
-# Plot resilience by density
+# Plot calculate_resilience by density
 params <- list(coreness$density, betweenness$density, degree$density, closeness$density, eigenvector$density)
 save_graph(file="facebook_density.png", xlabel="Steps", ylabel="Density", params, param_labels)
 densities <- params
@@ -130,11 +130,11 @@ summary <- graph_summary(g, FALSE)
 write.table(summary, file="network_properties.txt", sep=',', row.names=FALSE, col.names=TRUE, append=FALSE)
 
 metrics <- c("nodes", "edges", "apl", "transitivity", "avg-degree", "density")
-degree <- resilience(g, metrics, "a-degree")
-betweenness <- resilience(g, metrics, "a-betweenness")
-closeness <- resilience(g, metrics, "a-closeness")
-coreness <- resilience(g, metrics, "a-coreness")
-eigenvector <- resilience(g, metrics, "a-eigenvector")
+degree <- calculate_resilience(g, metrics, "a-degree")
+betweenness <- calculate_resilience(g, metrics, "a-betweenness")
+closeness <- calculate_resilience(g, metrics, "a-closeness")
+coreness <- calculate_resilience(g, metrics, "a-coreness")
+eigenvector <- calculate_resilience(g, metrics, "a-eigenvector")
 
 param_labels <- c("coreness", "betweenness", "degree", "closeness", "eigenvector")
 params <- list(coreness$nodes, betweenness$nodes, degree$nodes, closeness$nodes, eigenvector$nodes)
@@ -171,11 +171,11 @@ summary <- graph_summary(g, FALSE)
 write.table(summary, file="network_properties.txt", sep=',', row.names=FALSE, col.names=TRUE, append=FALSE)
 
 metrics <- c("nodes", "edges", "apl", "transitivity", "avg-degree", "density")
-degree <- resilience(g, metrics, "a-degree")
-betweenness <- resilience(g, metrics, "a-betweenness")
-closeness <- resilience(g, metrics, "a-closeness")
-coreness <- resilience(g, metrics, "a-coreness")
-eigenvector <- resilience(g, metrics, "a-eigenvector")
+degree <- calculate_resilience(g, metrics, "a-degree")
+betweenness <- calculate_resilience(g, metrics, "a-betweenness")
+closeness <- calculate_resilience(g, metrics, "a-closeness")
+coreness <- calculate_resilience(g, metrics, "a-coreness")
+eigenvector <- calculate_resilience(g, metrics, "a-eigenvector")
 
 param_labels <- c("coreness", "betweenness", "degree", "closeness", "eigenvector")
 params <- list(coreness$nodes, betweenness$nodes, degree$nodes, closeness$nodes, eigenvector$nodes)
@@ -212,11 +212,11 @@ summary <- graph_summary(g, FALSE)
 write.table(summary, file="network_properties.txt", sep=',', row.names=FALSE, col.names=TRUE, append=FALSE)
 
 metrics <- c("nodes", "edges", "apl", "transitivity", "avg-degree", "density")
-degree <- resilience(g, metrics, "a-degree")
-betweenness <- resilience(g, metrics, "a-betweenness")
-closeness <- resilience(g, metrics, "a-closeness")
-coreness <- resilience(g, metrics, "a-coreness")
-eigenvector <- resilience(g, metrics, "a-eigenvector")
+degree <- calculate_resilience(g, metrics, "a-degree")
+betweenness <- calculate_resilience(g, metrics, "a-betweenness")
+closeness <- calculate_resilience(g, metrics, "a-closeness")
+coreness <- calculate_resilience(g, metrics, "a-coreness")
+eigenvector <- calculate_resilience(g, metrics, "a-eigenvector")
 
 param_labels <- c("coreness", "betweenness", "degree", "closeness", "eigenvector")
 params <- list(coreness$nodes, betweenness$nodes, degree$nodes, closeness$nodes, eigenvector$nodes)
@@ -253,11 +253,11 @@ summary <- graph_summary(g, FALSE)
 write.table(summary, file="network_properties.txt", sep=',', row.names=FALSE, col.names=TRUE, append=FALSE)
 
 metrics <- c("nodes", "edges", "apl", "transitivity", "avg-degree", "density")
-degree <- resilience(g, metrics, "a-degree")
-betweenness <- resilience(g, metrics, "a-betweenness")
-closeness <- resilience(g, metrics, "a-closeness")
-coreness <- resilience(g, metrics, "a-coreness")
-eigenvector <- resilience(g, metrics, "a-eigenvector")
+degree <- calculate_resilience(g, metrics, "a-degree")
+betweenness <- calculate_resilience(g, metrics, "a-betweenness")
+closeness <- calculate_resilience(g, metrics, "a-closeness")
+coreness <- calculate_resilience(g, metrics, "a-coreness")
+eigenvector <- calculate_resilience(g, metrics, "a-eigenvector")
 
 param_labels <- c("coreness", "betweenness", "degree", "closeness", "eigenvector")
 params <- list(coreness$nodes, betweenness$nodes, degree$nodes, closeness$nodes, eigenvector$nodes)
@@ -301,11 +301,11 @@ summary <- graph_summary(g, FALSE)
 write.table(summary, file="network_properties.txt", sep=',', row.names=FALSE, col.names=TRUE, append=FALSE)
 
 metrics <- c("nodes", "edges", "apl", "transitivity", "avg-degree", "density")
-degree <- resilience(g, metrics, "a-degree")
-betweenness <- resilience(g, metrics, "a-betweenness")
-closeness <- resilience(g, metrics, "a-closeness")
-coreness <- resilience(g, metrics, "a-coreness")
-eigenvector <- resilience(g, metrics, "a-eigenvector")
+degree <- calculate_resilience(g, metrics, "a-degree")
+betweenness <- calculate_resilience(g, metrics, "a-betweenness")
+closeness <- calculate_resilience(g, metrics, "a-closeness")
+coreness <- calculate_resilience(g, metrics, "a-coreness")
+eigenvector <- calculate_resilience(g, metrics, "a-eigenvector")
 
 param_labels <- c("coreness", "betweenness", "degree", "closeness", "eigenvector")
 params <- list(coreness$nodes, betweenness$nodes, degree$nodes, closeness$nodes, eigenvector$nodes)
@@ -342,11 +342,11 @@ summary <- graph_summary(g, FALSE)
 write.table(summary, file="network_properties.txt", sep=',', row.names=FALSE, col.names=TRUE, append=FALSE)
 
 metrics <- c("nodes", "edges", "apl", "transitivity", "avg-degree", "density")
-degree <- resilience(g, metrics, "a-degree")
-betweenness <- resilience(g, metrics, "a-betweenness")
-closeness <- resilience(g, metrics, "a-closeness")
-coreness <- resilience(g, metrics, "a-coreness")
-eigenvector <- resilience(g, metrics, "a-eigenvector")
+degree <- calculate_resilience(g, metrics, "a-degree")
+betweenness <- calculate_resilience(g, metrics, "a-betweenness")
+closeness <- calculate_resilience(g, metrics, "a-closeness")
+coreness <- calculate_resilience(g, metrics, "a-coreness")
+eigenvector <- calculate_resilience(g, metrics, "a-eigenvector")
 
 param_labels <- c("coreness", "betweenness", "degree", "closeness", "eigenvector")
 params <- list(coreness$nodes, betweenness$nodes, degree$nodes, closeness$nodes, eigenvector$nodes)
@@ -383,11 +383,11 @@ summary <- graph_summary(g, FALSE)
 write.table(summary, file="network_properties.txt", sep=',', row.names=FALSE, col.names=TRUE, append=FALSE)
 
 metrics <- c("nodes", "edges", "apl", "transitivity", "avg-degree", "density")
-degree <- resilience(g, metrics, "a-degree")
-betweenness <- resilience(g, metrics, "a-betweenness")
-closeness <- resilience(g, metrics, "a-closeness")
-coreness <- resilience(g, metrics, "a-coreness")
-eigenvector <- resilience(g, metrics, "a-eigenvector")
+degree <- calculate_resilience(g, metrics, "a-degree")
+betweenness <- calculate_resilience(g, metrics, "a-betweenness")
+closeness <- calculate_resilience(g, metrics, "a-closeness")
+coreness <- calculate_resilience(g, metrics, "a-coreness")
+eigenvector <- calculate_resilience(g, metrics, "a-eigenvector")
 
 param_labels <- c("coreness", "betweenness", "degree", "closeness", "eigenvector")
 params <- list(coreness$nodes, betweenness$nodes, degree$nodes, closeness$nodes, eigenvector$nodes)
