@@ -19,9 +19,11 @@ source('influence_maximization.R')
 #### Experiment settings
 ###################################
 
-# Get results in a consolidated way
-write_results <- function(uuid, seed, graph, results) {
+# Calculates several traits from given graph and returns as data frame
+get_graph_traits <- function(graph) {
   degrees <- degree(graph)
+  # Allocate node indices as node names
+  V(graph)$name <- 1:vcount(graph)
   data <- data.frame(node=V(graph)$name,
                      degree=degrees,
                      closeness=closeness(graph),
@@ -41,9 +43,15 @@ write_results <- function(uuid, seed, graph, results) {
                      avg_distance=mean_distance(graph),
                      graph_triads=length(triangles(graph)),
                      graph_girth=girth(graph)$girth)
-  filename <- paste("Experiments/optimal/graph_", vcount(graph), "_", uuid, ".out", sep='')
+  data
+}
+
+# Get results in a consolidated way
+write_results <- function(uuid, seed, graph, results) {
+  data <- get_graph_traits(graph)
+  filename <- paste("Experiments/optimal/test_graph_", vcount(graph), "_", uuid, ".out", sep='')
   write.table(data, file=filename, quote=FALSE, row.names=FALSE, append=TRUE, sep=',')
-  write.table(results, file="Experiments/optimal/results.out", quote=FALSE, row.names=FALSE, append=TRUE)
+  write.table(results, file="Experiments/optimal/test_results.out", quote=FALSE, row.names=FALSE, append=TRUE)
 }
 
 # Get resiliences from given set of samples
@@ -80,9 +88,12 @@ get_resiliences <- function(combinations, graph, budget, parallel=FALSE) {
 
 # Define parameters
 # Repeat experiement for multiple sizes
-sizes <- c(50, 55)
+sizes <- c(40)
 # Repeat experiement 4 times
+# For model training
 seeds <- c(1, 30, 600, 9000)
+# For testing
+seeds <- c(3, 60, 900, 1000)
 #seeds <- c(1)
 parallel <- TRUE
 
@@ -95,8 +106,6 @@ for (size in sizes) {
     print(experiment)
     # Generate graph
     graph <- generate_random(size, prob)
-    # Allocate node indices as node names
-    V(graph)$name <- 1:vcount(graph)
     # Fetch all combinations of given budget
     combinations <- getall(iterpc(vcount(graph), budget))
     # Start timer
