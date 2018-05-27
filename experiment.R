@@ -2,18 +2,17 @@
 #### Load required resources
 ###################################
 
+# THIS CODE IS TESTED ON R-3.4.4
+
 library(igraph)
 library(parallel)
 library(snow) # For linux
 #library(doSNOW) # For Windows
 library(foreach)
-#devtools::install_github("randy3k/iterpc") # Alternative way to install iterpc
-
-devtools::install_github("randy3k/iterpc")
-
-library(iterpc)
 library(jsonlite)
 library(uuid)
+#devtools::install_github("randy3k/iterpc") # Alternative way to install iterpc
+library(iterpc)
 
 source('graph_util.R')
 source('influence_maximization.R')
@@ -95,7 +94,7 @@ get_resiliences <- function(combinations, graph, budget, parallel=FALSE) {
 
 # Define parameters
 # Repeat experiement for multiple sizes
-sizes <- c(29)
+sizes <- c(50)
 # Repeat experiement 4 times
 # For model training
 seeds <- c(1, 30, 600, 9000)
@@ -114,7 +113,7 @@ for (size in sizes) {
     # Generate graph
     graph <- generate_random(size, prob)
     # Fetch all combinations of given budget
-    combinations <- getall(iterpc(vcount(graph), budget))
+    combinations <- getall(iterpc(vcount(graph), round(budget)))
     # Start timer
     start <- as.numeric(Sys.time())
     # Store resiliences of all combinations
@@ -139,7 +138,7 @@ for (size in sizes) {
     # Allocate node indices as node names
     V(graph)$name <- 1:vcount(graph)
     # Fetch all combinations of given budget
-    combinations <- getall(iterpc(vcount(graph), budget))
+    combinations <- getall(iterpc(vcount(graph), round(budget)))
     # Start timer
     start <- as.numeric(Sys.time())
     # Store resiliences of all combinations
@@ -164,7 +163,7 @@ for (size in sizes) {
     # Allocate node indices as node names
     V(graph)$name <- 1:vcount(graph)
     # Fetch all combinations of given budget
-    combinations <- getall(iterpc(vcount(graph), budget))
+    combinations <- getall(iterpc(vcount(graph), round(budget)))
     # Start timer
     start <- as.numeric(Sys.time())
     # Store resiliences of all combinations
@@ -190,7 +189,7 @@ for (size in sizes) {
     # Allocate node indices as node names
     V(graph)$name <- 1:vcount(graph)
     # Fetch all combinations of given budget
-    combinations <- getall(iterpc(vcount(graph), budget))
+    combinations <- getall(iterpc(vcount(graph), round(budget)))
     # Start timer
     start <- as.numeric(Sys.time())
     # Store resiliences of all combinations
