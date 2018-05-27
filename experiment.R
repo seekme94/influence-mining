@@ -3,11 +3,14 @@
 ###################################
 
 library(igraph)
-library(RMySQL)
 library(parallel)
 library(snow) # For linux
-#library(doSNOW) # For windows
+#library(doSNOW) # For Windows
 library(foreach)
+#devtools::install_github("randy3k/iterpc") # Alternative way to install iterpc
+
+devtools::install_github("randy3k/iterpc")
+
 library(iterpc)
 library(jsonlite)
 library(uuid)
@@ -63,8 +66,12 @@ get_resiliences <- function(combinations, graph, budget, parallel=FALSE) {
     # Initiate parallel processing
     cores <- detectCores() - 1
     cl <- makeCluster(cores)
-    #registerDoSNOW(cl)
-    registerDoSEQ()
+    # For linux
+    if (Sys.info()[[1]] == "Linux") {
+      registerDoSEQ()
+    } else {
+      registerDoSNOW(cl)
+    }
     # Loop for each combination in the sample
     resiliences <- foreach (i = samples, .packages=c("igraph"), .export=c("resilience","largest_component")) %dopar% {
       # Pick a random sample
@@ -88,7 +95,7 @@ get_resiliences <- function(combinations, graph, budget, parallel=FALSE) {
 
 # Define parameters
 # Repeat experiement for multiple sizes
-sizes <- c(40)
+sizes <- c(29)
 # Repeat experiement 4 times
 # For model training
 seeds <- c(1, 30, 600, 9000)

@@ -10,3 +10,4 @@ vignettes/*.pdf
 *.Rproj.user
 *.RData
 *.RDataTmp
+.Rproj.user
