@@ -94,3 +94,37 @@ x
 {"experiment":"Resilience experiment on Small world graph_generate_holme_kim(size=40,probability=0.1)","uuid":"80062662-4fd0-11e8-b21f-1ff2a236b2a1","time":"6366.06607604027","date":"Sat May 05 00:22:35 2018","resilience":"16","nodes":[1,3,4,10]}
 x
 {"experiment":"Resilience experiment on Small world graph_generate_holme_kim(size=40,probability=0.1)","uuid":"f68d5fc0-4fe0-11e8-b21f-1ff2a236b2a1","time":"7070.06344604492","date":"Sat May 05 02:20:26 2018","resilience":"25","nodes":[2,3,5,13]}
+x
+{"experiment":"Resilience experiment on Random graph_generate_random(size=45,probability=0.1)","uuid":"9a805aa8-e9e7-4b4a-8929-7a68ce991b8a","time":"94.6311304569244","date":"Sun Jul 29 10:51:31 2018","resilience":"36","nodes":{}}
+x
+{"experiment":"Resilience experiment on Random graph_generate_random(size=45,probability=0.1)","uuid":"cbcaa4d1-e71c-460b-92de-d86de363fedf","time":"142.922842264175","date":"Sun Jul 29 10:53:54 2018","resilience":"37","nodes":{}}
+x
+{"experiment":"Resilience experiment on Random graph_generate_random(size=45,probability=0.1)","uuid":"6a8dec33-7652-4162-9fcf-3be8bf9fd0f7","time":"140.060188055038","date":"Sun Jul 29 10:56:14 2018","resilience":"36","nodes":{}}
+x
+{"experiment":"Resilience experiment on Random graph_generate_random(size=45,probability=0.1)","uuid":"98d6fc01-c4b8-403b-9139-699c18efe6ee","time":"131.025277614594","date":"Sun Jul 29 10:58:25 2018","resilience":"37","nodes":{}}
+x
+{"experiment":"Resilience experiment on Scale-free graph_generate_scale-free(size=45,preference=1)","uuid":"0a95f3f7-c24f-4db5-a811-2c61e3ba6e2c","time":"136.796239614487","date":"Sun Jul 29 11:00:42 2018","resilience":"7","nodes":[1,3,5,14]}
+x
+{"experiment":"Resilience experiment on Scale-free graph_generate_scale-free(size=45,preference=1)","uuid":"f3ab4361-19ec-4b5f-a05a-f36bf91bf10f","time":"136.656151771545","date":"Sun Jul 29 11:02:59 2018","resilience":"6","nodes":[1,2,3,4]}
+x
+{"experiment":"Resilience experiment on Scale-free graph_generate_scale-free(size=45,preference=1)","uuid":"1192b484-e2db-4ccc-af82-092d7ddc976d","time":"149.852884292603","date":"Sun Jul 29 11:05:28 2018","resilience":"5","nodes":[1,5,13,18]}
+x
+{"experiment":"Resilience experiment on Scale-free graph_generate_scale-free(size=45,preference=1)","uuid":"fbe38e83-e399-4dfc-8a87-a85abc0e22b9","time":"139.072664499283","date":"Sun Jul 29 11:07:48 2018","resilience":"4","nodes":[2,3,11,12]}
+x
+{"experiment":"Resilience experiment on Small world graph_generate_small_world(size=45,probability=0.1)","uuid":"8030263f-b19a-4004-8c72-611e030bda9f","time":"145.797304153442","date":"Sun Jul 29 11:10:13 2018","resilience":"37","nodes":[1,11,14,25]}
+x
+{"experiment":"Resilience experiment on Small world graph_generate_small_world(size=45,probability=0.1)","uuid":"150b49f7-da8e-4633-938c-e68d9262dac4","time":"138.661955118179","date":"Sun Jul 29 11:12:32 2018","resilience":"34","nodes":[2,28,30,39]}
+x
+{"experiment":"Resilience experiment on Small world graph_generate_small_world(size=45,probability=0.1)","uuid":"295e2ce7-235c-41a6-859d-b583b1cdd8bd","time":"146.568172931671","date":"Sun Jul 29 11:14:59 2018","resilience":"36","nodes":[7,10,24,32]}
+x
+{"experiment":"Resilience experiment on Small world graph_generate_small_world(size=45,probability=0.1)","uuid":"e35f7bbd-6d84-4ee5-9904-70e1f327349e","time":"147.915943622589","date":"Sun Jul 29 11:17:27 2018","resilience":"33","nodes":[10,15,20,45]}
+x
+{"experiment":"Resilience experiment on Small world graph_generate_holme_kim(size=45,probability=0.1)","uuid":"04fc19af-b61e-4ddb-895f-4242e14a8115","time":"156.879550695419","date":"Sun Jul 29 11:20:04 2018","resilience":"32","nodes":[3,6,8,10]}
+x
+{"experiment":"Resilience experiment on Small world graph_generate_holme_kim(size=45,probability=0.1)","uuid":"02a28496-30af-4e0a-b91d-324ae2eaf287","time":"152.987466812134","date":"Sun Jul 29 11:22:37 2018","resilience":"33","nodes":[2,4,6,15]}
+x
+{"experiment":"Resilience experiment on Small world graph_generate_holme_kim(size=45,probability=0.1)","uuid":"62316291-5e0b-42bc-9225-6ca0c4fb3c54","time":"182.467983722687","date":"Sun Jul 29 11:25:39 2018","resilience":"14","nodes":[3,4,5,7]}
+x
+{"experiment":"Resilience experiment on Small world graph_generate_holme_kim(size=45,probability=0.1)","uuid":"b0e04ab7-5eec-422e-96f8-1beb466fdaa9","time":"153.167994260788","date":"Sun Jul 29 11:28:12 2018","resilience":"22","nodes":[2,3,4,6]}
+x
+{"experiment":"Resilience experiment on Random graph_generate_random(size=50,probability=0.1)","uuid":"4961d606-286c-46e6-8376-c327095760e3","time":"5169.41464424133","date":"Sun Jul 29 13:02:15 2018","resilience":"42","nodes":{}}
