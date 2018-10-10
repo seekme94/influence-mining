@@ -4,14 +4,15 @@ library(foreach)
 library(igraph)
 
 
-# Apply example
-#system.time(clusterApply(cl, 1:cores, function(x) Sys.sleep(1)))
-# Foreach example
-#system.time(foreach(x=list(1:cores))  %dopar% {Sys.sleep(1)})
 cores <- detectCores() - 1
 cl <- makeCluster(cores)
 registerDoSEQ()
 start <- as.numeric(Sys.time())
+
+# Apply example
+system.time(clusterApply(cl, 1:cores, function(x) Sys.sleep(1)))
+# Foreach example
+system.time(foreach(x=list(1:cores))  %dopar% {Sys.sleep(1)})
 
 k <- 4
 graph <- erdos.renyi.game(250, p.or.m = 0.1)
@@ -36,3 +37,4 @@ end <- as.numeric(Sys.time())
 # Unregister cluster
 stopCluster(cl)
 print(end - start)
+
