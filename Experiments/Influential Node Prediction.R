@@ -7,7 +7,7 @@
 library(igraph)
 library(parallel)
 library(doMC) # For linux
-#library(doSNOW) # For Windows
+library(doSNOW) # For Windows
 library(foreach)
 library(jsonlite)
 library(uuid)

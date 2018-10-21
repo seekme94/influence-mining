@@ -1,19 +1,10 @@
-library(caret)
-library(rpart)
-library(rpart.plot)
-library(RColorBrewer)
-library(randomForest)
-library(party)
-library(nnet)
-library(neuralnet)
-library(sampling)
-library(digest)
-library(e1071)
-library(igraph)
 library(jsonlite)
-library(uuid)
-
-setwd('Experiments/optimal/')
+library(igraph)
+library(caret)
+library(e1071)
+library(randomForest)
+library(rpart)
+library(dplyr)
 
 source('../../graph_util.R')
 
@@ -58,27 +49,83 @@ for (i in 1:nrow(test_results)) {
   test <- rbind(test, graph)
 }
 
+# Influence by network traits
+newtest <- NULL
+for (graph_id in unique(test$graph_id)) {
+  graph <- test[test$graph_id == graph_id,]
+  influential_size <- nrow(graph) * 0.1
+  # Using dplyr
+  { # Label top n high-degree nodes as influential
+    inf_by_degree <- head(select(arrange(graph, desc(degree)), node), influential_size)
+    graph$inf_by_degree <- 0
+    graph$inf_by_degree[graph$node %in% inf_by_degree[[1]]] <- 1
+  }
+  { # Label top n high-closeness nodes as influential
+    inf_by_closeness <- head(select(arrange(graph, desc(closeness)), node), influential_size)
+    graph$inf_by_closeness <- 0
+    graph$inf_by_closeness[graph$node %in% inf_by_closeness[[1]]] <- 1
+  }
+  { # Label top n high-betweenness nodes as influential
+    inf_by_betweenness <- head(select(arrange(graph, desc(betweenness)), node), influential_size)
+    graph$inf_by_betweenness <- 0
+    graph$inf_by_betweenness[graph$node %in% inf_by_betweenness[[1]]] <- 1
+  }
+  { # Label top n high-eigenvalue nodes as influential
+    inf_by_eigenvalue <- head(select(arrange(graph, desc(eigenvalue)), node), influential_size)
+    graph$inf_by_eigenvalue <- 0
+    graph$inf_by_eigenvalue[graph$node %in% inf_by_betweenness[[1]]] <- 1
+  }
+  { # Label top n high-eigenvalue nodes as influential
+    inf_by_eigenvalue <- head(select(arrange(graph, desc(eigenvalue)), node), influential_size)
+    graph$inf_by_eigenvalue <- 0
+    graph$inf_by_eigenvalue[graph$node %in% inf_by_eigenvalue[[1]]] <- 1
+  }
+  { # Label top n high-pagerank nodes as influential
+    inf_by_pagerank <- head(select(arrange(graph, desc(pagerank)), node), influential_size)
+    graph$inf_by_pagerank <- 0
+    graph$inf_by_pagerank[graph$node %in% inf_by_pagerank[[1]]] <- 1
+  }
+  newtest <- rbind(newtest, graph)
+}
 
-# Formula for the model
+test <- newtest
+acc <- sum(test$influential == test$inf_by_degree)
+print(paste('Accuracy by high-degree', acc/nrow(test)))
+acc <- sum(test$influential == test$inf_by_closeness)
+print(paste('Accuracy by high-closeness', acc/nrow(test)))
+acc <- sum(test$influential == test$inf_by_betweenness)
+print(paste('Accuracy by high-betweenness', acc/nrow(test)))
+acc <- sum(test$influential == test$inf_by_eigenvalue)
+print(paste('Accuracy by high-eigenvalue', acc/nrow(test)))
+acc <- sum(test$influential == test$inf_by_pagerank)
+print(paste('Accuracy by high-pagerank', acc/nrow(test)))
+head(test)
+
+
+# Prediction phase
 formula <- influential ~ degree + closeness + betweenness + eigenvalue + eccentricity + pagerank + graph_size + graph_edges + graph_avg_degree + graph_max_degree + graph_apl + graph_clust_coef + graph_diameter + graph_density + graph_assortativity + avg_distance + graph_triads + graph_girth
 
-# Learn the linear regression model
-model <- glm(formula, family=binomial(link='logit'), data=train)
-
 head(train)
-
-
-# TODO
-summary(model)
-anova(model)
-plot(model)
-
-# Create test data
 head(test[,-(21)])
 
-predicted <- predict(model, newdata=test[,-(21)], type='response')
-test$prediction <- as.numeric(predicted >= 0.5)
+method <- "rpart" # rpart, lm, rforest
+testset <- test[,-(21)] # Hide the actual results
+test$prediction <- NULL
+if (method == "rpart") {
+  # Learn the recursive partitioning model
+  model <- rpart(formula, data=train)
+} else if (method == "lm") {
+  # Learn the linear regression model
+  model <- glm(formula, family=binomial(link='logit'), data=train)
+} else if (method == "rforest") {
+  # Learn the random forest model
+  model <- randomForest(formula, data=train, importance=TRUE, ntree=50)
+}
 
-error <- mean(test$influential != test$prediction)
-print(paste('Accuracy', 1 - error))
+# Record how prediction model performs
+#summary(model)
+test$prediction_prob <- predict(model, testset)
+test$prediction <- as.numeric(test$prediction_prob >= 0.5)
+acc <- sum(test$influential == test$prediction)
+print(paste('Accuracy by machine learning', acc/nrow(test)))
 
