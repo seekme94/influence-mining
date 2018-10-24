@@ -6,7 +6,9 @@ library(randomForest)
 library(rpart)
 library(dplyr)
 
-source('../../graph_util.R')
+source('graph_util.R')
+
+setwd('Experiments/optimal/')
 
 train <- NULL
 test <- NULL
@@ -89,18 +91,6 @@ for (graph_id in unique(test$graph_id)) {
 }
 
 test <- newtest
-acc <- sum(test$influential == test$inf_by_degree)
-print(paste('Accuracy by high-degree', acc/nrow(test)))
-acc <- sum(test$influential == test$inf_by_closeness)
-print(paste('Accuracy by high-closeness', acc/nrow(test)))
-acc <- sum(test$influential == test$inf_by_betweenness)
-print(paste('Accuracy by high-betweenness', acc/nrow(test)))
-acc <- sum(test$influential == test$inf_by_eigenvalue)
-print(paste('Accuracy by high-eigenvalue', acc/nrow(test)))
-acc <- sum(test$influential == test$inf_by_pagerank)
-print(paste('Accuracy by high-pagerank', acc/nrow(test)))
-head(test)
-
 
 # Prediction phase
 formula <- influential ~ degree + closeness + betweenness + eigenvalue + eccentricity + pagerank + graph_size + graph_edges + graph_avg_degree + graph_max_degree + graph_apl + graph_clust_coef + graph_diameter + graph_density + graph_assortativity + avg_distance + graph_triads + graph_girth
@@ -126,6 +116,17 @@ if (method == "rpart") {
 #summary(model)
 test$prediction_prob <- predict(model, testset)
 test$prediction <- as.numeric(test$prediction_prob >= 0.5)
-acc <- sum(test$influential == test$prediction)
-print(paste('Accuracy by machine learning', acc/nrow(test)))
+
+test_graph_sizes <- c(30, 35, 40)
+for (size in test_graph_sizes) {
+  eval_set <- test[test$graph_size == size,]
+  results <- getresults(as.factor(eval_set$influential), as.factor(eval_set$prediction), '1')
+  print(paste('Accuracy by machine learning on graph size', size))
+  print(results)
+
+  results <- getresults(as.factor(eval_set$influential), as.factor(eval_set$inf_by_degree), '1')
+  print(paste('Accuracy by high-degree on graph size', size))
+  print(results)
+}
+
 
