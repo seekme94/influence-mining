@@ -1,6 +1,7 @@
 library(igraph)
 library(parallel)
 library(snow) # For linux
+library(doMC) # For Linux
 library(doSNOW) # For Windows
 library(foreach)
 library(iterpc)
@@ -21,19 +22,26 @@ get_resiliences <- function(combinations, graph, budget, parallel=FALSE) {
     cl <- makeCluster(cores)
     # For linux
     if (Sys.info()[[1]] == "Linux") {
-      registerDoSEQ()
+      registerDoMC(cores)
+      # Loop for each combination in the sample
+      resiliences <- foreach (i = samples, .packages=c("igraph"), .export=c("resilience","largest_component")) %dopar% {
+        # Pick a random sample
+        seed <- combinations[i, 1:budget]
+        # Calculte the resilience after removal of nodes seed
+        resilience(graph, V(graph)[seed])
+      }
     } else {
       registerDoSNOW(cl)
+      # Loop for each combination in the sample
+      resiliences <- foreach (i = samples, .packages=c("igraph"), .export=c("resilience","largest_component")) %dopar% {
+        # Pick a random sample
+        seed <- combinations[i, 1:budget]
+        # Calculte the resilience after removal of nodes seed
+        resilience(graph, V(graph)[seed])
+      }
+      # Stop parallel processing cluster
+      stopCluster(cl)
     }
-    # Loop for each combination in the sample
-    resiliences <- foreach (i = samples, .packages=c("igraph"), .export=c("resilience","largest_component")) %dopar% {
-      # Pick a random sample
-      seed <- combinations[i, 1:budget]
-      # Calculte the resilience after removal of nodes seed
-      resilience(graph, V(graph)[seed])
-    }
-    # Stop parallel processing cluster
-    stopCluster(cl)
   } else {
     for(i in samples) {
       # Pick sample
@@ -44,7 +52,6 @@ get_resiliences <- function(combinations, graph, budget, parallel=FALSE) {
   }
   unlist(resiliences)
 }
-
 
 # Define parameters
 sizes <- c(40)

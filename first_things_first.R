@@ -3,7 +3,7 @@ new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"
 if(length(new.packages)) {
   install.packages(new.packages)
 }
-library(c(list.of.packages))
+
 
 ## Get Precision/Recall/Accuracy table
 getresults <- function(x, y, positive) {
