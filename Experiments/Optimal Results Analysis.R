@@ -179,9 +179,7 @@ for (size in test_graph_sizes) {
 }
 
 # Create larger networks and compare the resilience of model with other heuristics
-g <- read.graph("../obama_edgelist.txt", format="ncol", directed=FALSE)
-
-#g <- generate_small_world(500, 0.01)
+g <- generate_small_world(5000, 0.001)
 graph <- get_graph_traits(g, TRUE)
 head(graph)
 influential_size <- nrow(graph) * 0.1
