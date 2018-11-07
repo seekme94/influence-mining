@@ -88,6 +88,9 @@ influence(edgesFile="C:/Datasets/twitter_edges.csv", budget=10, steps=2, model="
 ```
 influence(edgesFile="C:/Datasets/twitter_edges.csv", seed_method="betweenness")
 ```
+### Libraries used
+jsonlite, uuid, sampling, digest, RWeka, doMC, snow, doSNOW, iterpc, foreach, igraph, caret, e1071, party, rpart, rpart.plot, randomForest, RColorBrewer, nnet, rattle, ggplot2, Rcpp
+
 
 ### References:
 [1] Kempe, D., Kleinberg, J., & Tardos, É. (2003). Maximizing the Spread of Influence through a Social Network. In Proceedings of the ninth ACM SIGKDD international conference on Knowledge discovery and data mining - KDD ’03 (p. 137). New York, New York, USA: ACM Press. doi:10.1145/956755.956769

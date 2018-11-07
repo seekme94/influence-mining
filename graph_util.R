@@ -23,6 +23,46 @@ graph_summary <- function(graph, plot=FALSE) {
   o
 }
 
+#' Calculates several traits from given graph and returns as data frame
+#' @name get_graph_traits
+#' @param graph is the igraph object
+#' @param normalize uses pnorm function to normalize the traits. Default is FALSE
+#' @return data frame containing graph and its traits
+get_graph_traits <- function(graph, normalize=FALSE) {
+  degrees <- degree(graph)
+  # Allocate node indices as node names
+  V(graph)$name <- 1:vcount(graph)
+  data <- data.frame(node=V(graph)$name,
+                     degree=degrees,
+                     closeness=closeness(graph),
+                     betweenness=betweenness(graph),
+                     eigenvalue=eigen_centrality(graph)$vector,
+                     eccentricity=eccentricity(graph),
+                     pagerank=page_rank(graph)$vector,
+                     graph_size=vcount(graph),
+                     graph_edges=ecount(graph),
+                     graph_avg_degree=mean(degrees),
+                     graph_max_degree=max(degrees),
+                     graph_apl=average.path.length(graph),
+                     graph_clust_coef=transitivity(graph),
+                     graph_diameter=diameter(graph),
+                     graph_density=graph.density(graph),
+                     graph_assortativity=assortativity.degree(graph),
+                     avg_distance=mean_distance(graph),
+                     graph_triads=length(triangles(graph)),
+                     graph_girth=girth(graph)$girth)
+  if (normalize) {
+    for (trait in c("degree","closeness","betweenness","eigenvalue","eccentricity","pagerank")) {
+      data[,trait] <- normalize_trait(data[,trait])
+    }
+  }
+  data
+}
+
+normalize_trait <- function(x) {
+  pnorm(x, mean(x), sd(x))  
+}
+
 #' This function plots degree distribution of given graph
 #' @name plot_degree_distribution
 #' @param graph is the igraph object

@@ -21,33 +21,6 @@ source('influence_maximization.R')
 #### Experiment settings
 ###################################
 
-# Calculates several traits from given graph and returns as data frame
-get_graph_traits <- function(graph) {
-  degrees <- degree(graph)
-  # Allocate node indices as node names
-  V(graph)$name <- 1:vcount(graph)
-  data <- data.frame(node=V(graph)$name,
-                     degree=degrees,
-                     closeness=closeness(graph),
-                     betweenness=betweenness(graph),
-                     eigenvalue=eigen_centrality(graph)$vector,
-                     eccentricity=eccentricity(graph),
-                     pagerank=page_rank(graph)$vector,
-                     graph_size=vcount(graph),
-                     graph_edges=ecount(graph),
-                     graph_avg_degree=mean(degrees),
-                     graph_max_degree=max(degrees),
-                     graph_apl=average.path.length(graph),
-                     graph_clust_coef=transitivity(graph),
-                     graph_diameter=diameter(graph),
-                     graph_density=graph.density(graph),
-                     graph_assortativity=assortativity.degree(graph),
-                     avg_distance=mean_distance(graph),
-                     graph_triads=length(triangles(graph)),
-                     graph_girth=girth(graph)$girth)
-  data
-}
-
 # Get results in a consolidated way
 write_results <- function(uuid, seed, graph, results) {
   data <- get_graph_traits(graph)
