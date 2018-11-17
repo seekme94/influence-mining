@@ -11,8 +11,12 @@ library(doSNOW) # For Windows
 library(foreach)
 library(jsonlite)
 library(uuid)
+# Ubuntu requires apt install libssl-dev libcurl4-openssl-dev libgmp-dev
 library(iterpc)
-#devtools::install_github("randy3k/iterpc") # Alternative way to install iterpc
+devtools::install_github("randy3k/iterpc") # Alternative way to install iterpc
+
+library(combinat) # Get rid of iterpc
+
 
 source('graph_util.R')
 source('influence_maximization.R')
@@ -74,7 +78,7 @@ get_resiliences <- function(combinations, graph, budget, parallel=FALSE) {
 
 # Define parameters
 # Repeat experiement for multiple sizes
-sizes <- c(50)
+sizes <- c(40)
 # Repeat experiement 4 times
 # For model training
 seeds <- c(1, 30, 600, 9000)
@@ -93,7 +97,8 @@ for (size in sizes) {
     # Generate graph
     graph <- generate_random(size, prob)
     # Fetch all combinations of given budget
-    combinations <- getall(iterpc(vcount(graph), round(budget)))
+    combinations <- combn(vcount(graph), round(budget), simplify = TRUE)
+    #combinations <- getall(iterpc(vcount(graph), round(budget)))
     # Start timer
     start <- as.numeric(Sys.time())
     # Store resiliences of all combinations
@@ -106,7 +111,8 @@ for (size in sizes) {
     # Format the output as a single string
     uuid <- UUIDgenerate()
     results <- paste('{"experiment":"', experiment, '","uuid":"', uuid, '","time":"', (end - start), '","date":"', date(), '","resilience":"', min_resilience, '","nodes":', toJSON(top_nodes$name), '}', sep='')
-    write_results(uuid=uuid, graph=graph, seed=seed, results=results)
+    print(results)
+    #    write_results(uuid=uuid, graph=graph, seed=seed, results=results)
   }
   
   # SCALE FREE
