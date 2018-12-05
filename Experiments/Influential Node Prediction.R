@@ -11,7 +11,7 @@ library(doSNOW) # For Windows
 library(foreach)
 library(jsonlite)
 library(uuid)
-# Ubuntu requires apt install libssl-dev libcurl4-openssl-dev libgmp-dev
+# Ubuntu requires apt install build-essential libssl-dev libcurl4-openssl-dev libgmp-dev libcairo2-dev liblzma-dev libblas-dev
 library(iterpc)
 #devtools::install_github("randy3k/iterpc") # Alternative way to install iterpc
 library(future.apply)
@@ -26,7 +26,7 @@ source('influence_maximization.R')
 # Get results in a consolidated way
 write_results <- function(uuid, seed, graph, results) {
   data <- get_graph_traits(graph)
-  filename <- paste("Experiments/optimal/graph_", vcount(graph), "_", uuid, ".out", sep='')
+  filename <- paste("Experiments/optimal/graph_", vcount(graph), "_", uuid, ".csv", sep='')
   write.table(data, file=filename, quote=FALSE, row.names=FALSE, append=TRUE, sep=',')
   write.table(results, file="Experiments/optimal/results.out", quote=FALSE, row.names=FALSE, append=TRUE)
 }
@@ -44,7 +44,7 @@ get_resiliences <- function(graph, budget, parallel=FALSE) {
   resiliences <- NULL
   if (parallel) {
     # Initiate parallel processing
-    cores <- detectCores() - 1
+    cores <- 8
     cl <- makeCluster(cores)
     # For linux
     if (Sys.info()[[1]] == "Linux") {
@@ -119,7 +119,7 @@ get_resiliences_greedy <- function(graph, budget) {
 
 # Define parameters
 # Repeat experiement for multiple sizes
-sizes <- c(30, 35, 40, 45)
+sizes <- c(50)
 # Repeat experiement 4 times
 # For model training
 seeds <- c(1, 30, 600, 9000)
@@ -128,44 +128,19 @@ parallel <- TRUE
 
 for (size in sizes) {
   budget <- size * prob
-  # RANDOM
-  for (seed in seeds) {
-    set.seed(seed)
-    experiment <- paste("Resilience experiment on Random graph_", "generate_random(size=", size, ",", "probability=", prob, ")", sep='')
-    print(experiment)
-    # Generate graph
-    graph <- generate_random(size, prob)
-    # Start timer
-    start <- as.numeric(Sys.time())
-    # Store resiliences of all combinations
-    combinations <- get_resiliences(graph, budget, parallel)
-    # Stop timer
-    end <- as.numeric(Sys.time())
-    # Collect best seed set and its resilience
-    top_nodes <- V(graph)[combinations[which.min(combinations[,budget + 1]), 1:budget]]
-    min_resilience <- combinations[which.min(combinations[,budget + 1]), budget + 1]
-    # Format the output as a single string
-    uuid <- UUIDgenerate()
-    results <- paste('{"experiment":"', experiment, '","uuid":"', uuid, '","time":"', (end - start), '","date":"', date(), '","resilience":"', min_resilience, '","nodes":', toJSON(top_nodes$name), '}', sep='')
-    print(results)
-    #    write_results(uuid=uuid, graph=graph, seed=seed, results=results)
-  }
-  
   # SCALE FREE
   for (seed in seeds) {
     set.seed(seed)
-    experiment <- paste("Resilience experiment on Scale-free graph_", "generate_scale-free(size=", size, ",", "preference=1)", sep='')
+    experiment <- paste("Resilience experiment on Scale-free graph_", "generate_scale_free(size=", size, ",", "preference=1)", sep='')
     print(experiment)
     # Generate graph
     graph <- generate_scale_free(size)
     # Allocate node indices as node names
     V(graph)$name <- 1:vcount(graph)
-    # Fetch all combinations of given budget
-    combinations <- getall(iterpc(vcount(graph), round(budget)))
     # Start timer
     start <- as.numeric(Sys.time())
     # Store resiliences of all combinations
-    combinations <- cbind(combinations, get_resiliences(combinations, graph, budget, parallel))
+    combinations <- cbind(combinations, get_resiliences(graph, budget, parallel))
     # Stop timer
     end <- as.numeric(Sys.time())
     # Collect best seed set and its resilience
@@ -186,12 +161,10 @@ for (size in sizes) {
     graph <- generate_small_world(size, prob)
     # Allocate node indices as node names
     V(graph)$name <- 1:vcount(graph)
-    # Fetch all combinations of given budget
-    combinations <- getall(iterpc(vcount(graph), round(budget)))
     # Start timer
     start <- as.numeric(Sys.time())
     # Store resiliences of all combinations
-    combinations <- cbind(combinations, get_resiliences(combinations, graph, budget, parallel))
+    combinations <- cbind(combinations, get_resiliences(graph, budget, parallel))
     # Stop timer
     end <- as.numeric(Sys.time())
     # Collect best seed set and its resilience
@@ -206,19 +179,17 @@ for (size in sizes) {
   # HOLME AND KIM
   for (seed in seeds) {
     set.seed(seed)
-    experiment <- paste("Resilience experiment on Small world graph_", "generate_holme_kim(size=", size, ",", "probability=", prob, ")", sep='')
+    experiment <- paste("Resilience experiment on Holme and Kim graph_", "generate_holme_kim(size=", size, ",", "probability=", prob, ")", sep='')
     print(experiment)
     # Generate graph
     new_connections <- 2
     graph <- generate_holme_kim(size, new_connections, triad_prob=prob)
     # Allocate node indices as node names
     V(graph)$name <- 1:vcount(graph)
-    # Fetch all combinations of given budget
-    combinations <- getall(iterpc(vcount(graph), round(budget)))
     # Start timer
     start <- as.numeric(Sys.time())
     # Store resiliences of all combinations
-    combinations <- cbind(combinations, get_resiliences(combinations, graph, budget, parallel))
+    combinations <- cbind(combinations, get_resiliences(graph, budget, parallel))
     # Stop timer
     end <- as.numeric(Sys.time())
     # Collect best seed set and its resilience
@@ -237,7 +208,7 @@ for (size in sizes) {
 ###################################
 
 #** Note: Use future.apply function to execute in parallel
-sizes <- seq(from=1000, to=4500, by=100)
+sizes <- seq(from=1100, to=4500, by=100)
 prob <- 0.05
 for (size in sizes) {
   budget <- size * prob
@@ -271,7 +242,7 @@ for (size in sizes) {
   results <- paste('{"experiment":"', experiment, '","uuid":"', uuid, '","time":"', (end - start), '","date":"', date(), '","resilience":"', min_resilience, '","nodes":', toJSON(top_nodes$name), '}', sep='')
   write_results(uuid=uuid, graph=graph, seed=seed, results=results)
   
-  experiment <- paste("Resilience experiment on Small world graph_", "generate_holme_kim(size=", size, ",", "probability=", prob, ")", sep='')
+  experiment <- paste("Resilience experiment on Holme and Kim graph_", "generate_holme_kim(size=", size, ",", "probability=", prob, ")", sep='')
   # Generate Holme & Kim graph
   new_connections <- 2
   graph <- generate_holme_kim(size, new_connections, triad_prob=prob)
