@@ -2,12 +2,12 @@ require(iterpc)
 require(foreach)
 require(doMC)
 
-source('./graph_util.R')
-source('./db_util.R')
-source('./heuristics.R')
-source('./community_detection.R')
-source('./graph_util.R')
-source('./influence_maximization.R')
+source('util/graph_util.R')
+source('util/db_util.R')
+source('util/heuristics.R')
+source('util/community_detection.R')
+source('util/graph_util.R')
+source('util/influence_maximization.R')
 
 size <- 50
 budget <- size * 0.1

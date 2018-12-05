@@ -1,8 +1,8 @@
 library(igraph)
-source('./graph_util.R')
-source('./heuristics.R')
-source('./influence_maximization.R')
-source('./community_detection.R')
+source('util/graph_util.R')
+source('util/heuristics.R')
+source('util/influence_maximization.R')
+source('util/community_detection.R')
 
 ### Test Influence spread by multiple trials ###
 graph <- read.graph("Experiments/sample_edgelist.txt", format="ncol", directed=TRUE)

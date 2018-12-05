@@ -9,8 +9,7 @@ distance <- function(y, method=c("td", "dt")) {
 }
 
 ## Function to calculate difference in words between two sentences
-sentence_distance <- function (a, b, split=" ")
-{
+sentence_distance <- function (a, b, split=" ") {
     a_arr <- unlist(strsplit(a, split))
     b_arr <- unlist(strsplit(b, split))
     matches <- NULL
@@ -40,10 +39,8 @@ data <- data[data$tweet_id < 5000,]
 
 # Remove too similar tweets
 dupes <- NULL
-for (i in 1:nrow(data))
-{
-    for (j in i:nrow(data))
-    {
+for (i in 1:nrow(data)) {
+    for (j in i:nrow(data)) {
         if (i == j)
             next
         dist <- sentence_distance(data$text[i], data$text[j])
@@ -140,15 +137,13 @@ c <- ncol(tfidf_matrix)
 
 # Create edgelist by matching words
 edgelist <- data.frame(u=c(), v=c())
-for (i in 1:c-1) # For each column index
-{
-    for (j in i:c) # For each column index
-    {
+# For each column index 
+for (i in 1:c-1) {
+    for (j in i:c) {
         if (i == j)
             next
         diff <- sum(tfidf_matrix[,i] * tfidf_matrix[,j])
-        if (diff > 3)
-        {
+        if (diff > 3) {
             edgelist <- rbind(edgelist, data.frame(colnames(tfidf_matrix)[i], colnames(tfidf_matrix)[j]))
         }
     }
