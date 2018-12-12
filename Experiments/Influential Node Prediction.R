@@ -142,7 +142,7 @@ for (size in sizes) {
     end <- as.numeric(Sys.time())
     min_resilience <- resilience(graph, top_nodes)
     uuid <- UUIDgenerate()
-    results <- paste('{"experiment":"', experiment, '","uuid":"', uuid, '","seed":"', seed, '","time":"', (end - start), '","date":"', date(), '","resilience":"', min_resilience, '","nodes":', toJSON(top_nodes$name), '}', sep='')
+    results <- paste('{"experiment":"', experiment, '","size":"', size, '","uuid":"', uuid, '","seed":"', seed, '","time":"', (end - start), '","date":"', date(), '","resilience":"', min_resilience, '","nodes":', toJSON(top_nodes$name), '}', sep='')
     write_results(uuid=uuid, graph=graph, results=results)
   }
   
@@ -158,7 +158,7 @@ for (size in sizes) {
     end <- as.numeric(Sys.time())
     min_resilience <- resilience(graph, top_nodes)
     uuid <- UUIDgenerate()
-    results <- paste('{"experiment":"', experiment, '","uuid":"', uuid, '","seed":"', seed, '","time":"', (end - start), '","date":"', date(), '","resilience":"', min_resilience, '","nodes":', toJSON(top_nodes$name), '}', sep='')
+    results <- paste('{"experiment":"', experiment, '","size":"', size, '","uuid":"', uuid, '","seed":"', seed, '","time":"', (end - start), '","date":"', date(), '","resilience":"', min_resilience, '","nodes":', toJSON(top_nodes$name), '}', sep='')
     write_results(uuid=uuid, graph=graph, results=results)
   }
   
@@ -175,7 +175,7 @@ for (size in sizes) {
     end <- as.numeric(Sys.time())
     min_resilience <- resilience(graph, top_nodes)
     uuid <- UUIDgenerate()
-    results <- paste('{"experiment":"', experiment, '","uuid":"', uuid, '","seed":"', seed, '","time":"', (end - start), '","date":"', date(), '","resilience":"', min_resilience, '","nodes":', toJSON(top_nodes$name), '}', sep='')
+    results <- paste('{"experiment":"', experiment, '","size":"', size, '","uuid":"', uuid, '","seed":"', seed, '","time":"', (end - start), '","date":"', date(), '","resilience":"', min_resilience, '","nodes":', toJSON(top_nodes$name), '}', sep='')
     write_results(uuid=uuid, graph=graph, results=results)
   }
 }
@@ -186,7 +186,7 @@ for (size in sizes) {
 ###################################
 
 #** Note: Use future.apply function to execute in parallel
-sizes <- seq(from=2100, to=3000, by=100)
+sizes <- seq(from=2600, to=3000, by=100)
 prob <- 0.025
 
 for (size in sizes) {
@@ -203,7 +203,7 @@ for (size in sizes) {
     end <- as.numeric(Sys.time())
     min_resilience <- resilience(graph, top_nodes)
     uuid <- UUIDgenerate()
-    results <- paste('{"experiment":"', experiment, '","uuid":"', uuid, '","seed":"', seed, '","time":"', (end - start), '","date":"', date(), '","resilience":"', min_resilience, '","nodes":', toJSON(top_nodes$name), '}', sep='')
+    results <- paste('{"experiment":"', experiment, '","size":"', size, '","uuid":"', uuid, '","seed":"', seed, '","time":"', (end - start), '","date":"', date(), '","resilience":"', min_resilience, '","nodes":', toJSON(top_nodes$name), '}', sep='')
     write_results(uuid=uuid, graph=graph, results=results)
   }
   
@@ -219,7 +219,7 @@ for (size in sizes) {
     end <- as.numeric(Sys.time())
     min_resilience <- resilience(graph, top_nodes)
     uuid <- UUIDgenerate()
-    results <- paste('{"experiment":"', experiment, '","uuid":"', uuid, '","seed":"', seed, '","time":"', (end - start), '","date":"', date(), '","resilience":"', min_resilience, '","nodes":', toJSON(top_nodes$name), '}', sep='')
+    results <- paste('{"experiment":"', experiment, '","size":"', size, '","uuid":"', uuid, '","seed":"', seed, '","time":"', (end - start), '","date":"', date(), '","resilience":"', min_resilience, '","nodes":', toJSON(top_nodes$name), '}', sep='')
     write_results(uuid=uuid, graph=graph, results=results)
   }
   
@@ -236,7 +236,7 @@ for (size in sizes) {
     end <- as.numeric(Sys.time())
     min_resilience <- resilience(graph, top_nodes)
     uuid <- UUIDgenerate()
-    results <- paste('{"experiment":"', experiment, '","uuid":"', uuid, '","seed":"', seed, '","time":"', (end - start), '","date":"', date(), '","resilience":"', min_resilience, '","nodes":', toJSON(top_nodes$name), '}', sep='')
+    results <- paste('{"experiment":"', experiment, '","size":"', size, '","uuid":"', uuid, '","seed":"', seed, '","time":"', (end - start), '","date":"', date(), '","resilience":"', min_resilience, '","nodes":', toJSON(top_nodes$name), '}', sep='')
     write_results(uuid=uuid, graph=graph, results=results)
   }
 }

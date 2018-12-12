@@ -1,84 +1,64 @@
 #' This script is for analysis of the results from Optimal node ML model experiment.
-#' The Experiemnts/optimal directory contains the training and test graphs with network traits, one file per graph.
-#' The results are stored in results.json and test_results.json files, which contain the set of optimally influential nodes and their resilience
+#' The Experiemnts/optimal directory contains the graphs with network traits, one file per graph.
+#' The results are stored in results.json, which contain the set of influential nodes and their resilience
 #' 
-#' This file reads all the training and test graphs, learns a ML model and tests the efficiency on test data
-
-# Execute these lines to install all the required packages
-list.of.packages <- c("jsonlite", "uuid", "sampling", "digest", "RWeka", "doMC", "snow", "doSNOW", "iterpc", "future.apply", "foreach", "igraph", "caret", "e1071", "party", "rpart", "rpart.plot", "randomForest", "RColorBrewer", "nnet", "rattle", "ggplot2", "Rcpp")
-new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
-if(length(new.packages)) {
-  install.packages(new.packages)
-}
+#' This file reads all the data, learns a ML model and tests the efficiency on test data
 
 # Load required libraries
 library(jsonlite)
 library(igraph)
+library(dplyr)
 library(caret)
+library(rpart)
 library(e1071)
 library(randomForest)
-library(rpart)
-library(dplyr)
+library(C50)
+library(party)
 
 setwd('Experiments/optimal/')
 
 # Load required source files
-source('../../graph_util.R')
-source('../../influence_maximization.R')
+source('../../util/graph_util.R')
+source('../../util/influence_maximization.R')
 
-train <- NULL
-test <- NULL
+data <- NULL
 
 # Read the results
 results <- fromJSON(paste(readLines("results.json")))
-test_results <- fromJSON(paste(readLines("test_results.json")))
-head(results)
-head(test_results)
 
 # For all rows in results
 for (i in 1:nrow(results)) {
+  # Graph ID
+  graph_id <- paste('graph_', results[i, "size"], "_", results[i, "uuid"], sep='')
   # Read the respective graph data
-  file_name <- paste(results[i, "uuid"], ".csv", sep='')
-  graph <- read.csv(file_name)
+  graph <- read.csv(paste(graph_id, ".csv", sep=''))
   # Add a graph ID column
-  graph$graph_id <- results[i, "uuid"]
+  graph$graph_id <- graph_id
+  # Add a seed column
+  graph$seed <- results[i, "seed"]
   # Append a column to label influential nodes
   graph$influential <- 0
   # Extract IDs of influential nodes from results
   influential <- unlist(results[i, "nodes"])
   # Label these as influential
   graph[influential, "influential"] <- 1
-  train <- rbind(train, graph)
+  data <- rbind(data, graph)
 }
 
-# For all rows in test data
-for (i in 1:nrow(test_results)) {
-  # Read the respective graph data
-  file_name <- paste(test_results[i, "uuid"], ".out", sep='')
-  graph <- read.csv(file_name)
-  # Add a graph ID column
-  graph$graph_id <- test_results[i, "uuid"]
-  # Append a column to label influential nodes
-  graph$influential <- 0
-  # Extract IDs of influential nodes from results
-  influential <- unlist(test_results[i, "nodes"])
-  # Label these as influential
-  graph[influential, "influential"] <- 1
-  test <- rbind(test, graph)
-}
+# View a brief summary of data
+summary(data)
 
 # Normalize data
-train$degree <- normalize_trait(train$degree)
-train$closeness <- normalize_trait(train$closeness)
-train$betweenness <- normalize_trait(train$betweenness)
-train$eigenvalue <- normalize_trait(train$eigenvalue)
-train$eccentricity <- normalize_trait(train$eccentricity)
+data$degree <- normalize_trait(data$degree)
+data$closeness <- normalize_trait(data$closeness)
+data$betweenness <- normalize_trait(data$betweenness)
+data$eigenvalue <- normalize_trait(data$eigenvalue)
+data$eccentricity <- normalize_trait(data$eccentricity)
+data$graph_avg_degree <- normalize_trait(data$graph_avg_degree)
 
-test$degree <- normalize_trait(test$degree)
-test$closeness <- normalize_trait(test$closeness)
-test$betweenness <- normalize_trait(test$betweenness)
-test$eigenvalue <- normalize_trait(test$eigenvalue)
-test$eccentricity <- normalize_trait(test$eccentricity)
+# Split into 50/50 training and test sets
+train <- data[data$seed <= 500,]
+test <- data[data$seed > 500,]
 
 # Influence by network traits
 newtest <- NULL
@@ -118,65 +98,102 @@ for (graph_id in unique(test$graph_id)) {
   }
   newtest <- rbind(newtest, graph)
 }
-
 test <- newtest
 
 # Prediction phase
 # Formula considering both node and graph traits
-#formula <- influential ~ degree + closeness + betweenness + eigenvalue + eccentricity + pagerank + graph_size + graph_edges + graph_avg_degree + graph_max_degree + graph_apl + graph_clust_coef + graph_diameter + graph_density + graph_assortativity + avg_distance + graph_triads + graph_girth
-# Formula considering only node traits
-formula <- influential ~ degree + closeness + betweenness + eigenvalue + eccentricity + pagerank
+formula <- influential ~ degree + closeness + betweenness + eigenvalue + eccentricity + pagerank + graph_size + graph_edges + graph_clust_coef + graph_density + graph_assortativity + graph_girth
 
-head(train)
-head(test[,-(21)])
-
-# Learn Recursive Patitioning model
-method <- "rpart" # rpart, lm, rforest
-testset <- test[,-(21)] # Hide the actual results
-test$prediction <- NULL
-if (method == "rpart") {
-  # Learn the recursive partitioning model
-  model <- rpart(formula, data=train)
-} else if (method == "lm") {
-  # Learn the linear regression model
+## Learn prediction model
+# lm = Linear (logistic regression) model
+# rpart = Recursive partitioning
+# rforest = Random forests
+# svm = Support vector machines
+# ctree = Conditional inference tree
+# nnet = Neural network
+# ccboost = C50 boosting
+method <- "lm"
+if (method == "lm") {
   model <- glm(formula, family=binomial(link='logit'), data=train)
+  test$prediction <- as.factor(round(predict(model, test[,-(21)], type="response")))
+} else if (method == "rpart") {
+  model <- rpart(formula, data=train)
+  test$prediction <- as.factor(round(predict(model, test[,-(21)])))
+} else if (method == "svm") {
+  # Caution! takes a lot of time to train
+  model <- svm(formula, data=train[train$graph_size < 500,], kernel="radial")
+  test$prediction <- as.factor(round(predict(model, newdata=test[,-(21)], probability = TRUE)))
 } else if (method == "rforest") {
-  # Learn the random forest model
-  model <- randomForest(formula, data=train, importance=TRUE, ntree=50)
+  # Caution! takes a lot of time to train
+  model <- randomForest(formula, data=train, ntree=500, mtry=3, na.action=na.exclude)
+  test$prediction <- as.factor(round(predict(model, test[,-(21)])))
+} else if (method == "nnet") {
+  # Caution! takes a lot of time to train
+  model <- avNNet(formula, train, allowParallel=TRUE, size=500)
+  test$prediction <- as.factor(round(predict(model, test[,-(21)])))
+} else if (method == "cboost") {
+  model <- C5.0(formula, train, trials=100, rules=TRUE, control=C5.0Control(earlyStopping=FALSE))
+  test$prediction <- as.factor(round(predict(model, test[,-(21)])))
 }
-
+getresults(as.factor(test$influential), test$prediction, '1')
 summary(model)
-# Store probabilities and decisions separately
-test$prediction_prob <- predict(model, testset)
-test$prediction <- as.numeric(test$prediction_prob >= 0.5)
 
-test_graph_sizes <- c(30, 35, 40, 45)
-for (size in test_graph_sizes) {
-  eval_set <- test[test$graph_size == size,]
-  results <- getresults(as.factor(eval_set$influential), as.factor(eval_set$prediction), '1')
-  print(paste('Accuracy by machine learning on graph size', size))
-  print(results)
 
-  results <- getresults(as.factor(eval_set$influential), as.factor(eval_set$inf_by_degree), '1')
-  print(paste('Accuracy by high-degree on graph size', size))
-  print(results)
-  
-  results <- getresults(as.factor(eval_set$influential), as.factor(eval_set$inf_by_betweenness), '1')
-  print(paste('Accuracy by high-betweenness on graph size', size))
-  print(results)
-  
-  results <- getresults(as.factor(eval_set$influential), as.factor(eval_set$inf_by_closeness), '1')
-  print(paste('Accuracy by high-closeness on graph size', size))
-  print(results)
-  
-  results <- getresults(as.factor(eval_set$influential), as.factor(eval_set$inf_by_eigenvalue), '1')
-  print(paste('Accuracy by high-eigen vector on graph size', size))
-  print(results)
-  
-  results <- getresults(as.factor(eval_set$influential), as.factor(eval_set$inf_by_pagerank), '1')
-  print(paste('Accuracy by high-pagerank on graph size', size))
-  print(results)
+graph_size <- unique(test$graph_size[test$graph_size >= 30])
+# Empty data set to contain results
+resultset <- data.frame(size=c(), method=c(), accuracy=c(), pos_pred_value=c(), sensitivity=c(), specificity=c())
+# Machine learning model
+for (i in graph_size) {
+  actual <- as.factor(test$influential[test$graph_size == i])
+  results <- getresults(actual, as.factor(test$prediction[test$graph_size == i]), '1')
+  row <- data.frame(size=i, method='ML', accuracy=results[[1]], pos_pred_value=results[[2]], sensitivity=results[[3]], specificity=results[[4]])
+  resultset <- rbind(resultset, row)
 }
+# High degree
+for (i in graph_size) {
+  actual <- as.factor(test$influential[test$graph_size == i])
+  results <- getresults(actual, as.factor(test$inf_by_degree[test$graph_size == i]), '1')
+  row <- data.frame(size=i, method='Degree', accuracy=results[[1]], pos_pred_value=results[[2]], sensitivity=results[[3]], specificity=results[[4]])
+  resultset <- rbind(resultset, row)
+}
+# High betweenness
+for (i in graph_size) {
+  actual <- as.factor(test$influential[test$graph_size == i])
+  results <- getresults(actual, as.factor(test$inf_by_betweenness[test$graph_size == i]), '1')
+  row <- data.frame(size=i, method='Betweenness', accuracy=results[[1]], pos_pred_value=results[[2]], sensitivity=results[[3]], specificity=results[[4]])
+  resultset <- rbind(resultset, row)
+}
+# High closeness
+for (i in graph_size) {
+  actual <- as.factor(test$influential[test$graph_size == i])
+  results <- getresults(actual, as.factor(test$inf_by_closeness[test$graph_size == i]), '1')
+  row <- data.frame(size=i, method='Closeness', accuracy=results[[1]], pos_pred_value=results[[2]], sensitivity=results[[3]], specificity=results[[4]])
+  resultset <- rbind(resultset, row)
+}
+# High Eigenvalue
+for (i in graph_size) {
+  actual <- as.factor(test$influential[test$graph_size == i])
+  results <- getresults(actual, as.factor(test$inf_by_eigenvalue[test$graph_size == i]), '1')
+  row <- data.frame(size=i, method='Eigenvector', accuracy=results[[1]], pos_pred_value=results[[2]], sensitivity=results[[3]], specificity=results[[4]])
+  resultset <- rbind(resultset, row)
+}
+# High Pagerank
+for (i in graph_size) {
+  actual <- as.factor(test$influential[test$graph_size == i])
+  results <- getresults(actual, as.factor(test$inf_by_pagerank[test$graph_size == i]), '1')
+  row <- data.frame(size=i, method='Pagerank', accuracy=results[[1]], pos_pred_value=results[[2]], sensitivity=results[[3]], specificity=results[[4]])
+  resultset <- rbind(resultset, row)
+}
+print(resultset)
+
+##################################################################################
+# Analysis of results
+##################################################################################
+# Check the number of instances where ML performed better than the rest in terms of accuracy
+dt <- select(resultset, size:accuracy) %>% arrange(size, desc(accuracy)) %>% filter(size < 100)
+
+resultset[resultset$size == 30 && resultset$accuracy,c(1,2,3)]
+
 
 # Create larger networks and compare the resilience of model with other heuristics
 g <- generate_small_world(5000, 0.001)
