@@ -127,7 +127,7 @@ seeds <- c(2, 30, 500, 7000, 110000, 1300000)
 prob <- 0.1
 
 # Repeat experiement for multiple sizes
-sizes <- c(50)
+sizes <- c()
 for (size in sizes) {
   budget <- size * prob
   # SCALE FREE
@@ -186,8 +186,9 @@ for (size in sizes) {
 ###################################
 
 #** Note: Use future.apply function to execute in parallel
-sizes <- seq(from=100, to=1000, by=100)
+sizes <- seq(from=2100, to=3000, by=100)
 prob <- 0.025
+
 for (size in sizes) {
   budget <- size * prob
   # SCALE FREE
