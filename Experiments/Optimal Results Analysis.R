@@ -19,6 +19,7 @@ setwd('Experiments/optimal/')
 
 # Load required source files
 source('../../util/graph_util.R')
+source('../../util/classification_util.R')
 source('../../util/influence_maximization.R')
 
 data <- NULL
@@ -112,7 +113,7 @@ formula <- influential ~ degree + closeness + betweenness + eigenvalue + eccentr
 # ctree = Conditional inference tree
 # nnet = Neural network
 # ccboost = C50 boosting
-method <- "lm"
+method <- "rpart"
 if (method == "lm") {
   model <- glm(formula, family=binomial(link='logit'), data=train)
   test$prediction <- as.factor(round(predict(model, test[,-(21)], type="response")))
@@ -132,56 +133,58 @@ if (method == "lm") {
   model <- avNNet(formula, train, allowParallel=TRUE, size=500)
   test$prediction <- as.factor(round(predict(model, test[,-(21)])))
 } else if (method == "cboost") {
+  train$influential <- as.factor(train$influential)
   model <- C5.0(formula, train, trials=100, rules=TRUE, control=C5.0Control(earlyStopping=FALSE))
   test$prediction <- as.factor(round(predict(model, test[,-(21)])))
 }
-getresults(as.factor(test$influential), test$prediction, '1')
+get_prediction_results(as.factor(test$influential), test$prediction, '1')
 summary(model)
 
 
 graph_size <- unique(test$graph_size[test$graph_size >= 30])
+graph_size <- c(30,35,40,45,100,500,1000,1500,2000,2500) 
 # Empty data set to contain results
-resultset <- data.frame(size=c(), method=c(), accuracy=c(), pos_pred_value=c(), sensitivity=c(), specificity=c())
+resultset <- data.frame(size=c(), method=c(), accuracy=c(), pos_pred_value=c(), sensitivity=c(), specificity=c(), f1_score=c())
 # Machine learning model
 for (i in graph_size) {
   actual <- as.factor(test$influential[test$graph_size == i])
-  results <- getresults(actual, as.factor(test$prediction[test$graph_size == i]), '1')
-  row <- data.frame(size=i, method='ML', accuracy=results[[1]], pos_pred_value=results[[2]], sensitivity=results[[3]], specificity=results[[4]])
+  results <- get_prediction_results(actual, as.factor(test$prediction[test$graph_size == i]), '1')
+  row <- data.frame(size=i, method='ML', accuracy=results[[1]], pos_pred_value=results[[2]], sensitivity=results[[3]], specificity=results[[4]], f1_score=results[[5]])
   resultset <- rbind(resultset, row)
 }
 # High degree
 for (i in graph_size) {
   actual <- as.factor(test$influential[test$graph_size == i])
-  results <- getresults(actual, as.factor(test$inf_by_degree[test$graph_size == i]), '1')
-  row <- data.frame(size=i, method='Degree', accuracy=results[[1]], pos_pred_value=results[[2]], sensitivity=results[[3]], specificity=results[[4]])
+  results <- get_prediction_results(actual, as.factor(test$inf_by_degree[test$graph_size == i]), '1')
+  row <- data.frame(size=i, method='Degree', accuracy=results[[1]], pos_pred_value=results[[2]], sensitivity=results[[3]], specificity=results[[4]], f1_score=results[[5]])
   resultset <- rbind(resultset, row)
 }
 # High betweenness
 for (i in graph_size) {
   actual <- as.factor(test$influential[test$graph_size == i])
-  results <- getresults(actual, as.factor(test$inf_by_betweenness[test$graph_size == i]), '1')
-  row <- data.frame(size=i, method='Betweenness', accuracy=results[[1]], pos_pred_value=results[[2]], sensitivity=results[[3]], specificity=results[[4]])
+  results <- get_prediction_results(actual, as.factor(test$inf_by_betweenness[test$graph_size == i]), '1')
+  row <- data.frame(size=i, method='Betweenness', accuracy=results[[1]], pos_pred_value=results[[2]], sensitivity=results[[3]], specificity=results[[4]], f1_score=results[[5]])
   resultset <- rbind(resultset, row)
 }
 # High closeness
 for (i in graph_size) {
   actual <- as.factor(test$influential[test$graph_size == i])
-  results <- getresults(actual, as.factor(test$inf_by_closeness[test$graph_size == i]), '1')
-  row <- data.frame(size=i, method='Closeness', accuracy=results[[1]], pos_pred_value=results[[2]], sensitivity=results[[3]], specificity=results[[4]])
+  results <- get_prediction_results(actual, as.factor(test$inf_by_closeness[test$graph_size == i]), '1')
+  row <- data.frame(size=i, method='Closeness', accuracy=results[[1]], pos_pred_value=results[[2]], sensitivity=results[[3]], specificity=results[[4]], f1_score=results[[5]])
   resultset <- rbind(resultset, row)
 }
 # High Eigenvalue
 for (i in graph_size) {
   actual <- as.factor(test$influential[test$graph_size == i])
-  results <- getresults(actual, as.factor(test$inf_by_eigenvalue[test$graph_size == i]), '1')
-  row <- data.frame(size=i, method='Eigenvector', accuracy=results[[1]], pos_pred_value=results[[2]], sensitivity=results[[3]], specificity=results[[4]])
+  results <- get_prediction_results(actual, as.factor(test$inf_by_eigenvalue[test$graph_size == i]), '1')
+  row <- data.frame(size=i, method='Eigenvector', accuracy=results[[1]], pos_pred_value=results[[2]], sensitivity=results[[3]], specificity=results[[4]], f1_score=results[[5]])
   resultset <- rbind(resultset, row)
 }
 # High Pagerank
 for (i in graph_size) {
   actual <- as.factor(test$influential[test$graph_size == i])
-  results <- getresults(actual, as.factor(test$inf_by_pagerank[test$graph_size == i]), '1')
-  row <- data.frame(size=i, method='Pagerank', accuracy=results[[1]], pos_pred_value=results[[2]], sensitivity=results[[3]], specificity=results[[4]])
+  results <- get_prediction_results(actual, as.factor(test$inf_by_pagerank[test$graph_size == i]), '1')
+  row <- data.frame(size=i, method='Pagerank', accuracy=results[[1]], pos_pred_value=results[[2]], sensitivity=results[[3]], specificity=results[[4]], f1_score=results[[5]])
   resultset <- rbind(resultset, row)
 }
 print(resultset)
@@ -190,19 +193,14 @@ print(resultset)
 # Analysis of results
 ##################################################################################
 # Check the number of instances where ML performed better than the rest in terms of accuracy
-dt <- select(resultset, size:accuracy) %>% arrange(size, desc(accuracy)) %>% filter(size < 100)
+dt <- select(resultset, size:accuracy) %>% arrange(size, desc(accuracy)) %>% filter(size >= 100)
+dt
 
-resultset[resultset$size == 30 && resultset$accuracy,c(1,2,3)]
 
-
-# Create larger networks and compare the resilience of model with other heuristics
-g <- generate_small_world(5000, 0.001)
-graph <- get_graph_traits(g, TRUE)
-head(graph)
+graph <- get_graph_traits(generate_holme_kim(1000, 2, 0.05), TRUE)
 influential_size <- nrow(graph) * 0.1
-
 # Apply the model on this graph to classify influential nodes
-graph$prediction_prob <- predict(model, graph)
+graph$prediction_prob <- predict(model, graph, type="response")
 graph$prediction <- as.numeric(graph$prediction_prob >= 0.5)
 
 # Influential nodes by all traits
