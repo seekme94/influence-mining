@@ -14,23 +14,23 @@ library(e1071)
 library(randomForest)
 library(C50)
 library(party)
-
-setwd('Experiments/optimal/')
+library(doParallel)
 
 # Load required source files
-source('../../util/graph_util.R')
-source('../../util/classification_util.R')
-source('../../util/influence_maximization.R')
-
-data <- NULL
+source('util/graph_util.R')
+source('util/classification_util.R')
+source('util/influence_maximization.R')
 
 # Read the results
-results <- fromJSON(paste(readLines("results.json")))
+results <- fromJSON(paste(readLines("Experiments/optimal/results.json")))
+
+data <- NULL
+cores <- 8
 
 # For all rows in results
 for (i in 1:nrow(results)) {
   # Graph ID
-  graph_id <- paste('graph_', results[i, "size"], "_", results[i, "uuid"], sep='')
+  graph_id <- paste('Experiments/optimal/graph_', results[i, "size"], "_", results[i, "uuid"], sep='')
   # Read the respective graph data
   graph <- read.csv(paste(graph_id, ".csv", sep=''))
   # Add a graph ID column
@@ -113,7 +113,10 @@ formula <- influential ~ degree + closeness + betweenness + eigenvalue + eccentr
 # ctree = Conditional inference tree
 # nnet = Neural network
 # ccboost = C50 boosting
-method <- "rpart"
+start <- Sys.time()
+method <- "nnet"
+# Limit training data
+train <- train[train$seed == 500,]
 if (method == "lm") {
   model <- glm(formula, family=binomial(link='logit'), data=train)
   test$prediction <- as.factor(round(predict(model, test[,-(21)], type="response")))
@@ -121,28 +124,34 @@ if (method == "lm") {
   model <- rpart(formula, data=train)
   test$prediction <- as.factor(round(predict(model, test[,-(21)])))
 } else if (method == "svm") {
-  # Caution! takes a lot of time to train
-  model <- svm(formula, data=train[train$graph_size < 500,], kernel="radial")
+  model <- svm(formula, data=train, kernel="radial")
   test$prediction <- as.factor(round(predict(model, newdata=test[,-(21)], probability = TRUE)))
 } else if (method == "rforest") {
-  # Caution! takes a lot of time to train
-  model <- randomForest(formula, data=train, ntree=500, mtry=3, na.action=na.exclude)
+  cl <- makeCluster(cores)
+  registerDoParallel(cores)
+  model <- foreach(ntree=rep(100, cores), .combine=combine, .multicombine=TRUE, .packages='randomForest') %dopar% {
+    randomForest(formula, data=train, ntree=ntree, mtry=3, na.action=na.exclude)
+  }
+  stopCluster(cl)
+#  model <- randomForest(formula, data=train, ntree=500, mtry=3, na.action=na.exclude)
   test$prediction <- as.factor(round(predict(model, test[,-(21)])))
 } else if (method == "nnet") {
-  # Caution! takes a lot of time to train
-  model <- avNNet(formula, train, allowParallel=TRUE, size=500)
+  cl <- makeCluster(cores)
+  registerDoParallel(cores)
+  model <- avNNet(formula, train, allowParallel=TRUE, size=100, MaxNWts=10000)
+  stopCluster(cl)
   test$prediction <- as.factor(round(predict(model, test[,-(21)])))
 } else if (method == "cboost") {
   train$influential <- as.factor(train$influential)
   model <- C5.0(formula, train, trials=100, rules=TRUE, control=C5.0Control(earlyStopping=FALSE))
   test$prediction <- as.factor(round(predict(model, test[,-(21)])))
 }
-get_prediction_results(as.factor(test$influential), test$prediction, '1')
+print(Sys.time() - start)
 summary(model)
+get_prediction_results(test$influential, test$prediction, '1')
 
 
 graph_size <- unique(test$graph_size[test$graph_size >= 30])
-graph_size <- c(30,35,40,45,100,500,1000,1500,2000,2500) 
 # Empty data set to contain results
 resultset <- data.frame(size=c(), method=c(), accuracy=c(), pos_pred_value=c(), sensitivity=c(), specificity=c(), f1_score=c())
 # Machine learning model
@@ -193,11 +202,11 @@ print(resultset)
 # Analysis of results
 ##################################################################################
 # Check the number of instances where ML performed better than the rest in terms of accuracy
-dt <- select(resultset, size:accuracy) %>% arrange(size, desc(accuracy)) %>% filter(size >= 100)
+dt <- select(resultset, size:accuracy) %>% arrange(size, desc(accuracy)) %>% filter(size >= 30)
 dt
 
-
-graph <- get_graph_traits(generate_holme_kim(1000, 2, 0.05), TRUE)
+g <- generate_holme_kim(1000, 2, 0.05)
+graph <- get_graph_traits(g, TRUE)
 influential_size <- nrow(graph) * 0.1
 # Apply the model on this graph to classify influential nodes
 graph$prediction_prob <- predict(model, graph, type="response")
