@@ -23,11 +23,19 @@ plot(graph, vertex.size=2)
 # Extract influential nodes using Greedy method
 influential <- get_influential_nodes_greedy(graph, budget)
 
-# Algorithm: select n nodes which are most distinct
-distinct <- V(graph)[which(degree(graph) == 1)]
-
+## Algorithm: select n nodes which are most distinct
+# First, find shortest paths for every pair of nodes
 paths <- shortest.paths(graph, V(graph), V(graph))
-
+# Select row-wise maximum shortest path
+max_path <- apply(paths, 1, function(x) max(x))
+max_path <- max(max_path)
+for (i in 1:(size-1)) {
+  for (j in 1:(size-1)) {
+    if (paths[i,j] == max_path) {
+      print(paste(i,j))
+    }
+  }
+}
 
 
 # Sequentially create an edge between both node sets

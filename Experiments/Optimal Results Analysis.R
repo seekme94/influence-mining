@@ -108,25 +108,27 @@ formula <- influential ~ degree + closeness + betweenness + eigenvalue + eccentr
 ## Learn prediction model
 # lm = Linear (logistic regression) model
 # rpart = Recursive partitioning
-# rforest = Random forests
 # svm = Support vector machines
-# ctree = Conditional inference tree
+# rforest = Random forests
 # nnet = Neural network
 # ccboost = C50 boosting
 start <- Sys.time()
-method <- "nnet"
+method <- c("lm", "rpart", "svm", "rforest", "nnet", "cboost")
 # Limit training data
 train <- train[train$seed == 500,]
-if (method == "lm") {
+if ("lm" %in% method) {
   model <- glm(formula, family=binomial(link='logit'), data=train)
-  test$prediction <- as.factor(round(predict(model, test[,-(21)], type="response")))
-} else if (method == "rpart") {
+  test$lm_prediction <- as.factor(round(predict(model, test[,-(21)], type="response")))
+}
+if ("rpart" %in% method) {
   model <- rpart(formula, data=train)
-  test$prediction <- as.factor(round(predict(model, test[,-(21)])))
-} else if (method == "svm") {
-  model <- svm(formula, data=train, kernel="radial")
-  test$prediction <- as.factor(round(predict(model, newdata=test[,-(21)], probability = TRUE)))
-} else if (method == "rforest") {
+  test$rpart_prediction <- as.factor(round(predict(model, test[,-(21)])))
+}
+if ("svm" %in% method) {
+  model <- svm(formula, data=train)
+  test$svm_prediction <- as.factor(round(predict(model, newdata=test[,-(21)], probability = TRUE)))
+}
+if ("rforest" %in% method) {
   cl <- makeCluster(cores)
   registerDoParallel(cores)
   model <- foreach(ntree=rep(100, cores), .combine=combine, .multicombine=TRUE, .packages='randomForest') %dopar% {
@@ -134,21 +136,23 @@ if (method == "lm") {
   }
   stopCluster(cl)
 #  model <- randomForest(formula, data=train, ntree=500, mtry=3, na.action=na.exclude)
-  test$prediction <- as.factor(round(predict(model, test[,-(21)])))
-} else if (method == "nnet") {
+  test$rforest_prediction <- as.factor(round(predict(model, test[,-(21)])))
+}
+if ("nnet" %in% method) {
   cl <- makeCluster(cores)
   registerDoParallel(cores)
   model <- avNNet(formula, train, allowParallel=TRUE, size=100, MaxNWts=10000)
   stopCluster(cl)
-  test$prediction <- as.factor(round(predict(model, test[,-(21)])))
-} else if (method == "cboost") {
+  test$nnet_prediction <- as.factor(round(predict(model, test[,-(21)])))
+}
+if ("cboost" %in% method) {
   train$influential <- as.factor(train$influential)
   model <- C5.0(formula, train, trials=100, rules=TRUE, control=C5.0Control(earlyStopping=FALSE))
-  test$prediction <- as.factor(round(predict(model, test[,-(21)])))
+  test$cboost_prediction <- as.factor(round(predict(model, test[,-(21)])))
 }
 print(Sys.time() - start)
 summary(model)
-get_prediction_results(test$influential, test$prediction, '1')
+get_prediction_results(test$influential, test$lm_prediction, '1')
 
 
 graph_size <- unique(test$graph_size[test$graph_size >= 30])
