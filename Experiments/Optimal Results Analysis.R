@@ -22,7 +22,7 @@ source('util/classification_util.R')
 source('util/influence_maximization.R')
 
 # Read the results
-results <- fromJSON(paste(readLines("Experiments/optimal/results.json")))
+results <- fromJSON(paste(readLines("Experiments/results/optimal_results.json")))
 
 data <- NULL
 cores <- 8
@@ -30,7 +30,7 @@ cores <- 8
 # For all rows in results
 for (i in 1:nrow(results)) {
   # Graph ID
-  graph_id <- paste('Experiments/optimal/graph_', results[i, "size"], "_", results[i, "uuid"], sep='')
+  graph_id <- paste('Experiments/data/optimal/graph_', results[i, "size"], "_", results[i, "uuid"], sep='')
   # Read the respective graph data
   graph <- read.csv(paste(graph_id, ".csv", sep=''))
   # Add a graph ID column
@@ -113,9 +113,9 @@ formula <- influential ~ degree + closeness + betweenness + eigenvalue + eccentr
 # nnet = Neural network
 # ccboost = C50 boosting
 start <- Sys.time()
-method <- c("lm", "rpart", "svm", "rforest", "nnet", "cboost")
+method <- c("lm") #c("lm", "rpart", "svm", "rforest", "nnet", "cboost")
 # Limit training data
-train <- train[train$seed == 500,]
+#train <- train[train$seed == 500,]
 if ("lm" %in% method) {
   model <- glm(formula, family=binomial(link='logit'), data=train)
   test$lm_prediction <- as.factor(round(predict(model, test[,-(21)], type="response")))
@@ -231,6 +231,10 @@ resilience(g, V(g)[inf])
 # Resilience by model. Pick top n by probability
 inf <- arrange(graph, desc(prediction_prob))[1:size, "node"]
 resilience(g, V(g)[inf])
+
+##################################################################################
+# Analysis on real data sets
+##################################################################################
 
 
 

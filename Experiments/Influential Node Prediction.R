@@ -26,9 +26,9 @@ source('util/influence_maximization.R')
 # Get results in a consolidated way
 write_results <- function(uuid, graph, results) {
   data <- get_graph_traits(graph)
-  filename <- paste("Experiments/optimal/graph_", vcount(graph), "_", uuid, ".csv", sep='')
+  filename <- paste("data/optimal/graph_", vcount(graph), "_", uuid, ".csv", sep='')
   write.table(data, file=filename, quote=FALSE, row.names=FALSE, append=TRUE, sep=',')
-  write.table(results, file="Experiments/optimal/results.out", quote=FALSE, row.names=FALSE, append=TRUE)
+  write.table(results, file="results/optimal_results.json", quote=FALSE, row.names=FALSE, append=TRUE)
 }
 
 ###################################

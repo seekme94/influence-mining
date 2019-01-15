@@ -5,7 +5,7 @@ source('util/influence_maximization.R')
 source('util/community_detection.R')
 
 ### Test Influence spread by multiple trials ###
-graph <- read.graph("Experiments/sample_edgelist.txt", format="ncol", directed=TRUE)
+graph <- read.graph("data/sample_edgelist.txt", format="ncol", directed=TRUE)
 # Set seed nodes
 seed <- c(2,4,8,9)
 # Compute spread of influence under IC model for given seed set
@@ -25,8 +25,7 @@ greedy
 greedy <- influence_max_greedy_parallel(graph=graph, budget=10, steps=10, model="IC", prob=0.3)
 greedy
 
-#setwd("D:/Datasets/Twitter")
-datasets <- c("Experiments/sample_edgelist.txt")
+datasets <- c("data/sample_edgelist.txt")
 models <- c("IC") # c("IC", "LT")
 methods <- c("random", "degree", "closeness", "betweenness", "coreness", "eigenvector", "a-degree", "a-closeness", "a-betweenness", "a-coreness", "a-eigenvector")
 methods <- c("random", "degree", "closeness", "betweenness")
@@ -68,7 +67,7 @@ for (model in models) {
           # Prepare summary
           summary[1] <- paste(model, dataset, length(V(graph)), length(E(graph)), budget, prob, max$time, max_inf$influence, method, method_inf$influence, sep=",")
           # Write summary to file
-          write(summary, paste(method, "results.csv", sep="_"), append=TRUE)
+          write(summary, paste(method, "results/influence_results.csv", sep="_"), append=TRUE)
         }
       }
     }

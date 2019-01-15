@@ -9,8 +9,6 @@ library(Matrix)
 library(wordcloud)
 library(psych)
 
-setwd("D:/Datasets/Twitter")
-
 # Hypotheses:
 # 1. The influential users on the basis of frequency of tweets to a topic is comparable to the influence spread by any traditional influence algorithm
 # 2. The influential content can determine whether a tweet will be retweeted or not. Why is this not happening?
@@ -20,182 +18,183 @@ setwd("D:/Datasets/Twitter")
 
 ## Print output to results.txt file in current working directory
 out <- function(x) {
-    cat(date(), ": ", x, "\n", file="results.txt", append=TRUE)
+  cat(date(), ": ", x, "\n", file="content_results.txt", append=TRUE)
 }
 
 ## Function to calculate distance between two sentences
 sentence_distance <- function (a, b, split=" ") {
-    a_arr <- unlist(strsplit(a, split))
-    b_arr <- unlist(strsplit(b, split))
-    matches <- NULL
-    if (length(a_arr) > length(b_arr))
-        matches <- which (b_arr %in% a_arr)
-    else
-        matches <- which (a_arr %in% b_arr) 
-    diff <- length(matches) / max(length(a_arr), length(b_arr))
-    diff
+  a_arr <- unlist(strsplit(a, split))
+  b_arr <- unlist(strsplit(b, split))
+  matches <- NULL
+  if (length(a_arr) > length(b_arr))
+    matches <- which (b_arr %in% a_arr)
+  else
+    matches <- which (a_arr %in% b_arr) 
+  diff <- length(matches) / max(length(a_arr), length(b_arr))
+  diff
 }
 
 ## Function to limit twitter dataset using different filters
 limit_tweets <- function(data, no_hashtags=FALSE, no_links=TRUE, english_only=TRUE, no_duplicates=TRUE, limit=0) {
-    # Remove hashtags from existing text
-    if (no_hashtags)
-        data$text <- gsub(pattern="[#\\S]+", replacement="", x=data[,4])
-    # Remove links from existing text
-    if (no_links) {
-        data$text <- gsub(pattern="(http://)+", replacement="", x=data[,4])
-        data$text <- gsub(pattern="(https://)+", replacement="", x=data[,4])
+  # Remove hashtags from existing text
+  if (no_hashtags)
+    data$text <- gsub(pattern="[#\\S]+", replacement="", x=data[,4])
+  # Remove links from existing text
+  if (no_links) {
+    data$text <- gsub(pattern="(http://)+", replacement="", x=data[,4])
+    data$text <- gsub(pattern="(https://)+", replacement="", x=data[,4])
+  }
+  # Limit to english tweets
+  if (english_only)
+    data <- data[data$lang=="en",]
+  # Remove retweets
+  #data <- data[data$retweet==FALSE,]
+  # Remove non retweeted
+  #data <- data[data$rt_count==0,]
+  # Limit data size by picking n number of nodes randomly
+  if (limit != 0) {
+    data$tweet_id <- 1:nrow(data)
+    data <- data[data$tweet_id %in% sample(data$tweet_id, limit, replace=FALSE),]    
+  }
+  
+  # Remove too similar tweets
+  if (no_duplicates) {
+    dupes <- NULL
+    for (i in 1:nrow(data)) {
+      for (j in i:nrow(data)) {
+        if (i == j)
+          next
+        dist <- sentence_distance(data$text[i], data$text[j])
+        if (dist >= 0.9) # Tune this number to control thickness of graph
+        #if (data$text[i] == data$text[j]) # Exact match
+          dupes <- append(dupes, j)
+      }
+      print(i)
     }
-    # Limit to english tweets
-    if (english_only)
-        data <- data[data$lang=="en",]
-    # Remove retweets
-    #data <- data[data$retweet==FALSE,]
-    # Remove non retweeted
-    #data <- data[data$rt_count==0,]
-    # Limit data size by picking n number of nodes randomly
-    if (limit != 0) {
-        data$tweet_id <- 1:nrow(data)
-        data <- data[data$tweet_id %in% sample(data$tweet_id, limit, replace=FALSE),]    
-    }
-    # Remove too similar tweets
-    if (no_duplicates) {
-        dupes <- NULL
-        for (i in 1:nrow(data)) {
-            for (j in i:nrow(data)) {
-                if (i == j)
-                    next
-                dist <- sentence_distance(data$text[i], data$text[j])
-                if (dist >= 0.9) # Tune this number to control thickness of graph
-                #if (data$text[i] == data$text[j]) # Exact match
-                    dupes <- append(dupes, j)
-            }
-            print(i)
-        }
-        data <- data[!rownames(data) %in% unique(dupes),]
-    }
-    data
+    data <- data[!rownames(data) %in% unique(dupes),]
+  }
+  data
 }
 
 # Using text mining functions, convert the data into a a term-frequency x inverse document-frequency matrix
 create_tfidf_matrix <- function (data, no_punctuations=TRUE, no_numbers=TRUE, no_whitespaces=TRUE, stemming=TRUE, additional_stopwords=c()) {
-    ## Turn all text and hashtags to lower case to avoid case disruption
-    data$content <- tolower(data$content)    
-    # IMPORTANT: in order to retrieve the tweet Id back, we need to create a mapping
-    tweetReader <- readTabular(mapping=list(content="text", id="tweet_id"))
-    ## Read tweets text and save as a corpus; reader control writes respective tweet_id in timension names
-    corpus = Corpus(DataframeSource(data), readerControl=list(reader=tweetReader))
-    if (no_punctuations)
-        corpus <- tm_map(corpus, removePunctuation)
-    if (no_numbers)
-        corpus <- tm_map(corpus, removeNumbers)
-    if (no_whitespaces)
-        corpus <- tm_map(corpus, stripWhitespace)
-    ## Apply stemming with the snowball stemmers (requires SnowballC, RWeka, rJava, RWekajars)
-    if (stemming) {
-        corpus <- tm_map(corpus, stemDocument)
-        corpus_dict <- corpus
-        ## WARNING! Takes some time
-        stemmed <- tm_map(corpus, function(x) stemCompletion(x, type="shortest", dictionary=corpus_dict))
-    }
-    ## Build term-document matrix, remove stop words
-    stops <- c(additional_stopwords, stopwords("SMART"))
-    # Convert into weighted TF-IDF
-    tdm = TermDocumentMatrix(corpus, control=list(stopwords=stops, weighting=weightTfIdf))
-    ## Print top frequent terms
-    frequent <- findFreqTerms(tdm, lowfreq=sqrt(tdm$ncol))
-    print(frequent)
-    # Find the sum of words in each Document
-    row_totals <- row_sums(tdm, na.rm=TRUE, dims=2)
-    ## Restrict the term-document matrix to only non-empty documents
-    tdm <- tdm[, row_totals > 0]
+  ## Turn all text and hashtags to lower case to avoid case disruption
+  data$content <- tolower(data$content)    
+  # IMPORTANT: in order to retrieve the tweet Id back, we need to create a mapping
+  tweetReader <- readTabular(mapping=list(content="text", id="tweet_id"))
+  ## Read tweets text and save as a corpus; reader control writes respective tweet_id in timension names
+  corpus = Corpus(DataframeSource(data), readerControl=list(reader=tweetReader))
+  if (no_punctuations)
+    corpus <- tm_map(corpus, removePunctuation)
+  if (no_numbers)
+    corpus <- tm_map(corpus, removeNumbers)
+  if (no_whitespaces)
+    corpus <- tm_map(corpus, stripWhitespace)
+  ## Apply stemming with the snowball stemmers (requires SnowballC, RWeka, rJava, RWekajars)
+  if (stemming) {
+    corpus <- tm_map(corpus, stemDocument)
+    corpus_dict <- corpus
+    ## WARNING! Takes some time
+    stemmed <- tm_map(corpus, function(x) stemCompletion(x, type="shortest", dictionary=corpus_dict))
+  }
+  ## Build term-document matrix, remove stop words
+  stops <- c(additional_stopwords, stopwords("SMART"))
+  # Convert into weighted TF-IDF
+  tdm = TermDocumentMatrix(corpus, control=list(stopwords=stops, weighting=weightTfIdf))
+  ## Print top frequent terms
+  frequent <- findFreqTerms(tdm, lowfreq=sqrt(tdm$ncol))
+  print(frequent)
+  # Find the sum of words in each Document
+  row_totals <- row_sums(tdm, na.rm=TRUE, dims=2)
+  ## Restrict the term-document matrix to only non-empty documents
+  tdm <- tdm[, row_totals > 0]
 
-    # The TDM can be larger than integer limit, thus using sparseMatrix function
-    tdm_matrix <- as.matrix(tdm)
-    #tdm_matrix <- sparseMatrix(tdm$i, tdm$j, x=tdm$v)
-    tdm_matrix
+  # The TDM can be larger than integer limit, thus using sparseMatrix function
+  tdm_matrix <- as.matrix(tdm)
+  #tdm_matrix <- sparseMatrix(tdm$i, tdm$j, x=tdm$v)
+  tdm_matrix
 }
 
 # Create word cloud from term-document matrix
 create_wordcloud <- function(tfidf_matrix, min.freq=30, words=50) {
-    word_freqs = sort(rowSums(tfidf_matrix), decreasing=TRUE)
-    frequencies <- sort(rowSums(tfidf_matrix), decreasing=TRUE)
-    avg <- mean(frequencies)
-    frequencies <- frequencies[frequencies > avg]
-    names <- names(frequencies)
-    cloud <- data.frame(word=names, freq=frequencies)
-    wordcloud(words=cloud$word, freq=cloud$freq, scale=c(5,0.5), max.words=words, rot.per=0.35, use.r.layout=FALSE, colors=brewer.pal(8, "Dark2"))
+  word_freqs = sort(rowSums(tfidf_matrix), decreasing=TRUE)
+  frequencies <- sort(rowSums(tfidf_matrix), decreasing=TRUE)
+  avg <- mean(frequencies)
+  frequencies <- frequencies[frequencies > avg]
+  names <- names(frequencies)
+  cloud <- data.frame(word=names, freq=frequencies)
+  wordcloud(words=cloud$word, freq=cloud$freq, scale=c(5,0.5), max.words=words, rot.per=0.35, use.r.layout=FALSE, colors=brewer.pal(8, "Dark2"))
 }
 
 # Create a Network (edge list) from a tfidf_matrix
 create_network <- function (tfidf_matrix, initial_threshold=0.5, progressive_threshold=TRUE, threshold_method=c('mean','hm')) {
-    edgelist <- data.frame(u=c(), v=c())
-    threshold <- initial_threshold
-    all_similarities <- c()
-    similarities <- c(threshold)
-    for (i in 1:ncol(tfidf_matrix)) {
-        for (j in i:ncol(tfidf_matrix)) {
-            if (i == j)
-                next
-            x <- tfidf_matrix[,i]
-            y <- tfidf_matrix[,j]
-            cosine_sim <- round(crossprod(x, y)/sqrt(crossprod(x) * crossprod(y)), 5)
-            if (is.na(cosine_sim[1]))
-                next
-            # Cosine similarity should not be too high, to avoid potential duplicates after preprocessing
-            else if (cosine_sim[1] < 0.05 | cosine_sim[1] > 0.95)
-                next
-            #print(cosine_sim)
-            similarities <- rbind(similarities, cosine_sim[1])
-            if (cosine_sim[1] >= threshold)
-                edgelist <- rbind(edgelist, data.frame(colnames(tfidf_matrix)[i], colnames(tfidf_matrix)[j]))
-            # Progressive threshold: learn by averaging through given fucntion in each iteration and adding previous similarities to next
-            if (progressive_threshold) {
-                if (threshold_method == 'mean')
-                    threshold <- mean(similarities)
-                else if (threshold_method == 'hm')
-                    threshold <- harmonic.mean(c(similarities))
-            }
-        }
-        all_similarities <- rbind(all_similarities, similarities)
-        if (i %% 100 == 0)
-            out(paste(i, "out of", ncol(tfidf_matrix), "current threshold is:", threshold, sep=" "))
+  edgelist <- data.frame(u=c(), v=c())
+  threshold <- initial_threshold
+  all_similarities <- c()
+  similarities <- c(threshold)
+  for (i in 1:ncol(tfidf_matrix)) {
+    for (j in i:ncol(tfidf_matrix)) {
+      if (i == j)
+        next
+      x <- tfidf_matrix[,i]
+      y <- tfidf_matrix[,j]
+      cosine_sim <- round(crossprod(x, y)/sqrt(crossprod(x) * crossprod(y)), 5)
+      if (is.na(cosine_sim[1]))
+        next
+      # Cosine similarity should not be too high, to avoid potential duplicates after preprocessing
+      else if (cosine_sim[1] < 0.05 | cosine_sim[1] > 0.95)
+        next
+      #print(cosine_sim)
+      similarities <- rbind(similarities, cosine_sim[1])
+      if (cosine_sim[1] >= threshold)
+        edgelist <- rbind(edgelist, data.frame(colnames(tfidf_matrix)[i], colnames(tfidf_matrix)[j]))
+      # Progressive threshold: learn by averaging through given fucntion in each iteration and adding previous similarities to next
+      if (progressive_threshold) {
+        if (threshold_method == 'mean')
+          threshold <- mean(similarities)
+        else if (threshold_method == 'hm')
+          threshold <- harmonic.mean(c(similarities))
+      }
     }
-    edgelist
+    all_similarities <- rbind(all_similarities, similarities)
+    if (i %% 100 == 0)
+      out(paste(i, "out of", ncol(tfidf_matrix), "current threshold is:", threshold, sep=" "))
+  }
+  edgelist
 }
 
 # Read the edgelist and replace node names with original text using tweets data
 create_names_edgelist <- function (data, edgelist) {
-    data$text <- gsub(" ", "_", data$text)
-    for (i in 1:nrow(edgelist)) {
-        a <- data[data$tweet_id == edgelist[i,1],c(1,3,4)]
-        b <- data[data$tweet_id == edgelist[i,2],c(1,3,4)]
-        edgelist[i,1] <- paste(a[1],a[2],a[3], sep="-")
-        edgelist[i,2] <- paste(b[1],b[2],b[3], sep="-")
-    }
-    edgelist
+  data$text <- gsub(" ", "_", data$text)
+  for (i in 1:nrow(edgelist)) {
+    a <- data[data$tweet_id == edgelist[i,1],c(1,3,4)]
+    b <- data[data$tweet_id == edgelist[i,2],c(1,3,4)]
+    edgelist[i,1] <- paste(a[1],a[2],a[3], sep="-")
+    edgelist[i,2] <- paste(b[1],b[2],b[3], sep="-")
+  }
+  edgelist
 }
 
 # Assigns a rank to each row, based on ordering on column number provided
 rank <- function(data, rank_by_colnum) {
-    data <- data[with(data, order(data[,rank_by_colnum])),]
-    data[,rank_by_colnum] <- as.factor(data[,rank_by_colnum])
-    data$rank <- NULL
-    data$rank <- abs(as.numeric(data[,rank_by_colnum]))
-    data$rank <- abs(1 + data$rank - max(data$rank))
-    data <- data[with(data, order(rank)),]
-    data
+  data <- data[with(data, order(data[,rank_by_colnum])),]
+  data[,rank_by_colnum] <- as.factor(data[,rank_by_colnum])
+  data$rank <- NULL
+  data$rank <- abs(as.numeric(data[,rank_by_colnum]))
+  data$rank <- abs(1 + data$rank - max(data$rank))
+  data <- data[with(data, order(rank)),]
+  data
 }
 
 #######################################################################################################################
 
 # DATA PREPROCESSING USING TEXT MINING
-query <- "my_twitter_network"
+query <- "../data/my_twitter_network"
 input <- paste(query, "_tweets.csv", collapse="", sep="")
 output <- paste(query, "_tweets_clean.csv", collapse="", sep="")
 graph_output <- paste(query, "_edgelist_txt.csv", collapse="", sep="")
 edge_names <- paste(query, "_edgenames.csv", collapse="", sep="")
-results <- "results.txt"
+results <- "results/content_network_results.txt"
 
 out("Process started")
 out("Experiment finds the influential nodes in a content-network using High-degree influence mining and influence maximization under Linear Threshold model")
@@ -227,7 +226,6 @@ out("Wrote edgelist to file.")
 # edgenames <- create_names_edgelist (data, edgelist)
 # write.table(x=edgelist, file=edge_names, quote=FALSE, sep=" ", row.names=FALSE, col.names=FALSE)
 # write(paste("Saved tweet_id,username,text-based edge list in:", edge_names), file=results, append=TRUE)
-
 
 
 #########################################################################################################

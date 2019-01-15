@@ -2,7 +2,7 @@ library(flexclust)
 library(igraph)
 #Load Iris
 k <- 3
-tiris=read.table("c:\\Datasets\\iris.data")
+tiris=read.table("D:/Datasets/iris.data")
 irisgd=tiris[5]
 tiris=tiris[1:4]
 dataset=tiris

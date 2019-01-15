@@ -5,17 +5,21 @@
 #' @return object containing summary
 graph_summary <- function(graph, plot=FALSE) {
   o <- NULL
+  degrees <- degree(graph)
   o$edges <- ecount(graph)
   o$vertices <- vcount(graph)
   o$vertex_edge_ratio <- o$vertices / o$edges
   o$connected <- is.connected(graph)
-  o$average_degree <- mean(degree(graph))
+  o$average_degree <- mean(degrees)
   o$average_path_length <- average.path.length(graph)
-  o$highest_degree <- max(degree(graph))
+  o$highest_degree <- max(degrees)
   o$density <- graph.density(graph)
   o$diameter <- diameter(graph)
   o$transitivity <- transitivity(graph)
   o$assortativity <- assortativity.degree(graph)
+  o$average_distance <- mean_distance(graph)
+  o$graph_triads <- length(triangles(graph))
+  o$girth <-girth(graph)$girth
   if (plot) {
     tkplot(graph)
     hist(degree(graph))
