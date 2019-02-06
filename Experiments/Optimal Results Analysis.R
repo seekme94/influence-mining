@@ -200,7 +200,7 @@ for (i in graph_size) {
   row <- data.frame(size=i, method='Pagerank', accuracy=results[[1]], pos_pred_value=results[[2]], sensitivity=results[[3]], specificity=results[[4]], f1_score=results[[5]])
   resultset <- rbind(resultset, row)
 }
-print(resultset)
+head(resultset)
 
 ##################################################################################
 # Analysis of results
@@ -232,13 +232,13 @@ resilience(g, V(g)[inf])
 inf <- arrange(graph, desc(prediction_prob))[1:size, "node"]
 resilience(g, V(g)[inf])
 
-##################################################################################
-# Analysis on real data sets
-##################################################################################
+# Arrange by accuracy
 
+arrange(resultset, desc(accuracy))[1:size, "node"]
 
 
 #### CONCLUSION:
 #' 1. The accuracy of the model surpasses the heuristics in all instances
-#' 2. The model is also ahead in terms of predicting most resilient nodes as long as the structure of generated graph is similar to training graphs
+#' 2. ML model is also ahead in terms of predicting most resilient nodes as long as the structure of generated graph is similar to training graphs
 #' 3. The method drops its performance on graphs having different network properties than those in the training set
+#' 4. Closeness and Eigenvector traits are always outperformed by other traits

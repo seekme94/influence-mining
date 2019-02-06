@@ -1,27 +1,29 @@
-setwd("D:\\Datasets\\Twitter")
 
 ## Function to calculate Euclidean distance between documents in term-document or document-term matrix
-distance <- function(y, method=c("td", "dt")) {
-    if (method=="td")
-        y / apply(y, 2, function(x) sqrt(sum(x^2)))
-    else
-        y / apply(y, 1, function(x) sqrt(sum(x^2)))
+distance <- function(y, method = c("td", "dt")) {
+  if (method == "td") {
+    y / apply(y, 2, function(x) sqrt(sum(x ^ 2)))
+  }
+  else {
+    y / apply(y, 1, function(x) sqrt(sum(x ^ 2)))
+  }
 }
 
 ## Function to calculate difference in words between two sentences
 sentence_distance <- function (a, b, split=" ") {
-    a_arr <- unlist(strsplit(a, split))
-    b_arr <- unlist(strsplit(b, split))
-    matches <- NULL
-    if (length(a_arr) > length(b_arr))
-        matches <- which (b_arr %in% a_arr)
-    else matches <- which (a_arr %in% b_arr) 
-    diff <- length(matches) / max(length(a_arr), length(b_arr))
-    diff
+  a_arr <- unlist(strsplit(a, split))
+  b_arr <- unlist(strsplit(b, split))
+  matches <- NULL
+  if (length(a_arr) > length(b_arr))
+    matches <- which (b_arr %in% a_arr)
+  else
+    matches <- which (a_arr %in% b_arr)
+  diff <- length(matches) / max(length(a_arr), length(b_arr))
+  diff
 }
 
 ## Read all english tweets from Obama network. English, because of available stop words, lemmatization and stemming techniques as well as Obama
-data <- read.csv("obama_tweets.csv", as.is=TRUE)
+data <- read.csv("Experiments/data/obama_tweets.csv", as.is=TRUE)
 # Remove hashtags and links from existing text
 data$text <- gsub(pattern="[#\\S]+|[http://]+", replacement="", x=data[,4])
 
@@ -40,14 +42,14 @@ data <- data[data$tweet_id < 5000,]
 # Remove too similar tweets
 dupes <- NULL
 for (i in 1:nrow(data)) {
-    for (j in i:nrow(data)) {
-        if (i == j)
-            next
-        dist <- sentence_distance(data$text[i], data$text[j])
-        if (dist < 0.05)
-            dupes <- append(dupes, j)
-    }
-    print(i)
+  for (j in i:nrow(data)) {
+    if (i == j)
+      next
+    dist <- sentence_distance(data$text[i], data$text[j])
+    if (dist < 0.05)
+      dupes <- append(dupes, j)
+  }
+  print(i)
 }
 data <- data[!rownames(data) %in% unique(dupes),]
 # Save to a different file
@@ -138,16 +140,16 @@ c <- ncol(tfidf_matrix)
 # Create edgelist by matching words
 edgelist <- data.frame(u=c(), v=c())
 # For each column index 
-for (i in 1:c-1) {
-    for (j in i:c) {
-        if (i == j)
-            next
-        diff <- sum(tfidf_matrix[,i] * tfidf_matrix[,j])
-        if (diff > 3) {
-            edgelist <- rbind(edgelist, data.frame(colnames(tfidf_matrix)[i], colnames(tfidf_matrix)[j]))
-        }
+for (i in 1:c - 1) {
+  for (j in i:c) {
+    if (i == j)
+      next
+    diff <- sum(tfidf_matrix[, i] * tfidf_matrix[, j])
+    if (diff > 3) {
+      edgelist <- rbind(edgelist, data.frame(colnames(tfidf_matrix)[i], colnames(tfidf_matrix)[j]))
     }
-    print(i)
+  }
+  print(i)
 }
 ## Write space-separated edge list to file without using quotes, row/column names
 write.table(x=edgelist, file="obama_edgelist_txt.csv", quote=FALSE, sep=" ", row.names=FALSE, col.names=FALSE, append=FALSE)

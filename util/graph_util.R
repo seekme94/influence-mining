@@ -67,6 +67,23 @@ normalize_trait <- function(x) {
   pnorm(x, mean(x), sd(x))  
 }
 
+#' This function can be used to normalize a set of numeric variables in a dataset between 0 and 1. Non-numeric data will be skipped
+#' @name normalize_data
+#' @param data is data frame to be normalized
+#' @param columns is list of columns to be normalized 
+normalize_data <- function(data, columns) {
+  for (column in columns) {
+    # Skip non-numeric data
+    if (mode(data[, column]) != "numeric") {
+      next
+    }
+    x <- data[, column]
+    x <- pnorm(x, mean(x), sd(x))
+    data[, column] <- x
+  }
+  data
+}
+
 #' This function plots degree distribution of given graph
 #' @name plot_degree_distribution
 #' @param graph is the igraph object
@@ -235,7 +252,7 @@ net.holme.kim <- function( n, m, pt ){
 #' @param graph is the igraph object
 #' @return largest component igraph object
 largest_component <- function(graph) {
-  gclust = clusters(graph)
+  gclust = igraph::clusters(graph)
   lcc = induced.subgraph(graph, V(graph)[which(gclust$membership == which.max(gclust$csize))])
   lcc
 }
