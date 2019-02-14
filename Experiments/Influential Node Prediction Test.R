@@ -94,12 +94,13 @@ graphs <- list(author, ita2000, caida, jdk, wordnet)
 for(graph in graphs) {
   print(fit_power_law(graph))
   test <- get_graph_traits(graph)
-  # Calculate collective influences
-  ci <- sapply(V(graph), function(x) { collective_influence(graph, neighborhood_distance=2, x) })
-  test$ci <- ci
+  # Collective influences
+  test$ci <- sapply(V(graph), function(x) { collective_influence(graph, neighborhood_distance=2, x) })
+  # Coreness
+  test$coreness <- coreness(graph)
 
   test$graph_id <- UUIDgenerate()
-  test <- normalize_data(test, columns=c("degree", "closeness", "betweenness", "eigenvalue", "eccentricity", "graph_avg_degree", "ci"))
+  test <- normalize_data(test, columns=c("degree", "closeness", "betweenness", "eigenvalue", "eccentricity", "graph_avg_degree", "ci", "coreness"))
 
   # Make predictions using model
   test$prediction_prob <- predict(model, newdata=test, type="response")
@@ -125,6 +126,9 @@ for(graph in graphs) {
   # By eccentricity
   inf <- arrange(test, desc(eccentricity))[1:size, "node"]
   results$eccentricity <- resilience(graph, V(graph)[inf])
+  # By coreness
+  inf <- arrange(test, desc(coreness))[1:size, "node"]
+  results$coreness <- resilience(graph, V(graph)[inf])
   # By collective influence
   inf <- arrange(test, desc(ci))[1:size, "node"]
   results$ci <- resilience(graph, V(graph)[inf])
@@ -137,4 +141,4 @@ for(graph in graphs) {
 
 
 #### CONCLUSION:
-# The model outperforms all other traits as long as the graph size is included in the model learnt
+# The model outperforms other traits as long as the graph size is included in the model learnt
