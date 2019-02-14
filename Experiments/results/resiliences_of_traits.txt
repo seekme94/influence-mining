@@ -1,0 +1,21 @@
+# Results of resilience test
+
+author (power law alpha=3.35)
+degree	betweenness	closeness	eigenvalue	pagerank	eccentricity	coreness	ci	model
+99	99		123		324		98		361		325		67	99
+
+ita2000 (power law alpha=1.7)
+degree	betweenness	closeness	eigenvalue	pagerank	eccentricity	coreness	ci	model
+2339	1909		2271		2407		2118		3139		2427		2312	1922
+
+caida (power law alpha=2.1)
+degree	betweenness	closeness	eigenvalue	pagerank	eccentricity	coreness	ci	model
+41	205		11628		10432		41		25152		1900		298	2012
+
+jdk (power law alpha=2.0)
+degree	betweenness	closeness	eigenvalue	pagerank	eccentricity	coreness	ci	model
+4741	5203		5232		5634		4484		6113		5592		4811	5222
+
+wordnet (power law alpha=2.5)
+degree	betweenness	closeness	eigenvalue	pagerank	eccentricity	coreness	ci	model
+
