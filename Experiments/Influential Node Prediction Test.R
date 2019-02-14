@@ -6,7 +6,6 @@
 
 # Load required libraries
 library(jsonlite)
-
 library(uuid)
 library(igraph)
 library(arules)
@@ -24,6 +23,7 @@ library(doParallel)
 source('util/graph_util.R')
 source('util/classification_util.R')
 source('util/influence_maximization.R')
+source('util/heuristics.R')
 
 # Read the results
 results <- fromJSON(paste(readLines("Experiments/results/optimal_results.json")))
@@ -50,13 +50,6 @@ for (i in 1:nrow(results)) {
 
 # Normalize data
 train <- normalize_data(train, columns=c("degree", "closeness", "betweenness", "eigenvalue", "eccentricity", "graph_avg_degree"))
-
-# Discretize traits
-train$degree <- discretize_naturally(train$degree)
-train$closeness <- discretize_naturally(train$closeness)
-train$betweenness <- discretize_naturally(train$betweenness)
-train$eigenvalue <- discretize_naturally(train$eigenvalue)
-train$eccentricity <- discretize_naturally(train$eccentricity)
 
 ## Learn prediction model
 formula <- influential ~ degree + closeness + betweenness + eigenvalue + eccentricity + pagerank # + graph_clust_coef + graph_density + graph_assortativity + graph_apl
@@ -88,42 +81,60 @@ if (method == "lm") {
 print(Sys.time() - start)
 summary(model)
 
+
 # Read test data set
-#graph <- largest_component(read.graph("Experiments/data/my_twitter_network.txt", directed=FALSE))
-#graph <- largest_component(read.graph("Experiments/data/author_netscience.txt", directed=FALSE))
-graph <- largest_component(read.graph("Experiments/data/as-caida.txt", directed=FALSE))
+author <- largest_component(read.graph("Experiments/data/author_netscience.txt", directed=FALSE))
+ita2000 <- largest_component(read.graph("Experiments/data/ita2000.txt", directed=FALSE))
+caida <- largest_component(read.graph("Experiments/data/as-caida.txt", directed=FALSE))
+jdk <- largest_component(read.graph("Experiments/data/jdk6_dependencies.txt", directed=FALSE))
+wordnet <- largest_component(read.graph("Experiments/data/wordnet.txt", directed=FALSE))
 
-test <- get_graph_traits(graph)
-test$graph_id <- UUIDgenerate()
-test <- normalize_data(test, columns=c("degree", "closeness", "betweenness", "eigenvalue", "eccentricity", "graph_avg_degree"))
+graphs <- list(author, ita2000, caida, jdk, wordnet)
 
-# Discretize traits
-test$degree <- discretize_naturally(test$degree)
-test$closeness <- discretize_naturally(test$closeness)
-test$betweenness <- discretize_naturally(test$betweenness)
-test$eigenvalue <- discretize_naturally(test$eigenvalue)
-test$eccentricity <- discretize_naturally(test$eccentricity)
+for(graph in graphs) {
+  print(fit_power_law(graph))
+  test <- get_graph_traits(graph)
+  # Calculate collective influences
+  ci <- sapply(V(graph), function(x) { collective_influence(graph, neighborhood_distance=2, x) })
+  test$ci <- ci
 
-# Make predictions using model
-test$prediction_prob <- predict(model, newdata=test, type="response")
+  test$graph_id <- UUIDgenerate()
+  test <- normalize_data(test, columns=c("degree", "closeness", "betweenness", "eigenvalue", "eccentricity", "graph_avg_degree", "ci"))
 
-# Influential nodes by all traits
-results <- NULL
-size <- nrow(test) * 0.05
-inf <- arrange(test, desc(degree))[1:size, "node"]
-results$degree <- resilience(graph, V(graph)[inf])
-inf <- arrange(test, desc(betweenness))[1:size, "node"]
-results$betweenness <- resilience(graph, V(graph)[inf])
-inf <- arrange(test, desc(closeness))[1:size, "node"]
-results$closeness <- resilience(graph, V(graph)[inf])
-inf <- arrange(test, desc(eigenvalue))[1:size, "node"]
-results$eigenvalue <- resilience(graph, V(graph)[inf])
-inf <- arrange(test, desc(pagerank))[1:size, "node"]
-results$pagerank <- resilience(graph, V(graph)[inf])
-# Resilience by model. Pick top n by probability
-inf <- arrange(test, desc(prediction_prob))[1:size, "node"]
-results$model <- resilience(graph, V(graph)[inf])
-unlist(results)
+  # Make predictions using model
+  test$prediction_prob <- predict(model, newdata=test, type="response")
+
+  # Influential nodes by all traits
+  results <- NULL
+  size <- nrow(test) * 0.05
+  # By degree
+  inf <- arrange(test, desc(degree))[1:size, "node"]
+  results$degree <- resilience(graph, V(graph)[inf])
+  # By betweenness
+  inf <- arrange(test, desc(betweenness))[1:size, "node"]
+  results$betweenness <- resilience(graph, V(graph)[inf])
+  # By closeness
+  inf <- arrange(test, desc(closeness))[1:size, "node"]
+  results$closeness <- resilience(graph, V(graph)[inf])
+  # By Eigen-vector centrality
+  inf <- arrange(test, desc(eigenvalue))[1:size, "node"]
+  results$eigenvalue <- resilience(graph, V(graph)[inf])
+  # By pagerank
+  inf <- arrange(test, desc(pagerank))[1:size, "node"]
+  results$pagerank <- resilience(graph, V(graph)[inf])
+  # By eccentricity
+  inf <- arrange(test, desc(eccentricity))[1:size, "node"]
+  results$eccentricity <- resilience(graph, V(graph)[inf])
+  # By collective influence
+  inf <- arrange(test, desc(ci))[1:size, "node"]
+  results$ci <- resilience(graph, V(graph)[inf])
+  
+  # Resilience by model. Pick top n by probability
+  inf <- arrange(test, desc(prediction_prob))[1:size, "node"]
+  results$model <- resilience(graph, V(graph)[inf])
+  print(unlist(results))
+}
+
 
 #### CONCLUSION:
-# 1. In Author-Netscience network, the model outperforms all other heuristics
+# The model outperforms all other traits as long as the graph size is included in the model learnt

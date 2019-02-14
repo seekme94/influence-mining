@@ -104,8 +104,8 @@ select_adaptive_seed <- function (graph, budget, seed_method=c("a-degree", "a-cl
 #' @param node_id is the ID of the target node
 #' @return influence as product of degree of target node and total sum of degrees of neighborhood
 #' TODO: extend the function and include adaptive methods as well as other centrality methods
-collective_influence <- function(g, neighborhood_distance, node_id, method=c("degree")){
-  neighbors_at_distance <- neighborhood(g, neighborhoodVal, nodes=node_id, mode="all")[[1]]
+collective_influence <- function(g, neighborhood_distance, node_id, method=c("degree")) {
+  neighbors_at_distance <- neighborhood(g, neighborhood_distance, nodes=node_id, mode="all")[[1]]
   neighbors_at_distance_discount <- neighborhood(g, neighborhood_distance - 1, nodes=node_id, mode="all")[[1]]
   # find all the nodes lying at given distance
   neighbors_only_at_distance <- setdiff(neighbors_at_distance, neighbors_at_distance_discount)

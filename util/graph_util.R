@@ -19,7 +19,7 @@ graph_summary <- function(graph, plot=FALSE) {
   o$assortativity <- assortativity.degree(graph)
   o$average_distance <- mean_distance(graph)
   o$graph_triads <- length(triangles(graph))
-  o$girth <-girth(graph)$girth
+  o$girth <- girth(graph)$girth
   if (plot) {
     tkplot(graph)
     hist(degree(graph))
@@ -100,29 +100,21 @@ plot_degree_distribution <- function(graph) {
   plot(probability ~ degree, log="xy", xlab="Degree (log)", ylab="Probability (log)", col=1, main="Degree Distribution")
 }
 
-#' This function plots power law to given graph
+#' This function plots degree distribution and returns power-law exponent of given graph
 #' @name fit_power_law
 #' @param graph is the igraph object
 fit_power_law = function(graph) {
-  degree = degree(graph, mode="all")
   distribution = degree.distribution(graph, mode="all", cumulative=FALSE)
-  degree = 1:max(degree)
+  degree = 1:max(degree(graph, mode="all"))
   probability = distribution[-1]
   # Remove blank values
-  nonzero.position = which(probability != 0)
-  probability = probability[nonzero.position]
-  degree = degree[nonzero.position]
-  # Logistic regression model
-  reg = lm(log(probability) ~ log(degree))
-  coef = coef(reg)
-  power.law.fit = function(x) exp(coef[[1]] + coef[[2]] * log(x))
-  alpha = -coef[[2]]
-  R.square = summary(reg)$r.squared
-  print(paste("Alpha =", round(alpha, 3)))
-  print(paste("R square =", round(R.square, 3)))
+  nonzero = which(probability != 0)
+  probability = probability[nonzero]
+  degree = degree[nonzero]
   # plot
   plot(probability ~ degree, log="xy", xlab="Degree (log)", ylab="Probability (log)", col=1, main="Degree Distribution")
-  curve(power.law.fit, col="red", add=T, n=length(degree))
+  # Return alpha, the exponent of fitted power-law 
+  igraph::fit_power_law(degree(graph))[2]
 }
 
 #' This function generates a tree-structured graph
