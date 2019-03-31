@@ -63,6 +63,65 @@ get_graph_traits <- function(graph, normalize=FALSE) {
   data
 }
 
+#' Calculates several node influence traits from given graph and returns as a list
+#' @name get_node_influence_traits
+#' @param graph is the igraph object
+#' @param traits is the vector of several influential metrices (traits). Available metrices are: betweenness, closeness, eigenvalue, coreness, pagerank, ci, a-degree, a-betweenness, a-closeness, a-eigenvalue, a-coreness, a-pagerank, a-ci (a-xxx representing adaptive ranking variant)
+#' @param normalize uses pnorm function to normalize the traits. Default is FALSE
+#' @return data frame containing graph and its traits
+get_node_influence_traits <- function(graph, normalize=FALSE, traits=c("betweenness", "closeness", "eigenvalue", "coreness", "pagerank", "ci", "a-degree", "a-betweenness", "a-closeness", "a-eigenvalue", "a-coreness", "a-pagerank", "a-ci")) {
+  data <- NULL
+  data$name <- 1:vcount(graph)
+  data$degree <- degree(graph)
+  if ("betweenness" %in% traits) {
+    data$betweenness <- betweenness(graph)
+  }
+  if ("closeness" %in% traits) {
+    data$closeness <- closeness(graph)
+  }
+  if ("eigenvalue" %in% traits) {
+    data$eigenvalue <- evcent(graph)$vector
+  }
+  if ("coreness" %in% traits) {
+    data$coreness <- coreness(graph)
+  }
+  if ("pagerank" %in% traits) {
+    data$pagerank <- page_rank(graph)$vector
+  }
+  if ("ci" %in% traits) {
+    data$ci <- sapply(V(graph), function(x) { collective_influence(graph, neighborhood_distance=2, x) })
+  }
+  # Normalize existing traits so far, if required
+  if (normalize) {
+    for (trait in names(data)) {
+      data[,trait] <- normalize_trait(data[,trait])
+    }
+  }
+  # Adaptive ranks will not be normalized
+  if ("a-degree" %in% traits) {
+    data$a_degree <- get_adaptive_ranking(graph, "degree")
+  }
+  if ("a-betweenness" %in% traits) {
+    data$a_betweenness <- get_adaptive_ranking(graph, "betweenness")
+  }
+  if ("a-closeness" %in% traits) {
+    data$a_closeness <- get_adaptive_ranking(graph, "closeness")
+  }
+  if ("a-eigenvalue" %in% traits) {
+    data$a_eigenvalue <- get_adaptive_ranking(graph, "eigenvalue")
+  }
+  if ("a-coreness" %in% traits) {
+    data$a_coreness <- get_adaptive_ranking(graph, "coreness")
+  }
+  if ("a-pagerank" %in% traits) {
+    data$a_pagerank <- get_adaptive_ranking(graph, "pagerank")
+  }
+  if ("a-ci" %in% traits) {
+    data$a_ci <- get_adaptive_ranking(graph, "collective_influence")
+  }
+  data
+}
+
 normalize_trait <- function(x) {
   pnorm(x, mean(x), sd(x))  
 }
