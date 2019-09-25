@@ -14,26 +14,42 @@ source('util/community_detection.R')
 
 # Read test data set
 author <- largest_component(read.graph("Experiments/data/author_netscience.txt", directed=FALSE))
-ita2000 <- largest_component(read.graph("Experiments/data/ita2000.txt", directed=FALSE))
-caida <- largest_component(read.graph("Experiments/data/as-caida.txt", directed=FALSE))
-jdk <- largest_component(read.graph("Experiments/data/jdk6_dependencies.txt", directed=FALSE))
+# ita2000 <- largest_component(read.graph("Experiments/data/ita2000.txt", directed=FALSE))
+# caida <- largest_component(read.graph("Experiments/data/as-caida.txt", directed=FALSE))
+# jdk <- largest_component(read.graph("Experiments/data/jdk6_dependencies.txt", directed=FALSE))
 
+##########################
+######### AUTHOR #########
+##########################
 # Detect communities using various algorithms
-V(author)$name <- V(author)
-communities <- find_communities(author, plot=TRUE, method="multilevel")
+graph <- author
+V(graph)$name <- V(graph)
+influential <- get_influential_nodes_greedy(graph, 0.05)
+graph <- find_communities(graph, plot=TRUE, method="multilevel")
 
-high_degreers <- NULL
-high_pagerankers <- NULL
-high_ciers <- NULL
-for (group in unique(V(communities)$group)) {
-  graph <- author
-  sub_g <- delete.vertices(graph, which(V(communities)$group == group))
-  sub_g_traits <- get_node_influence_traits(sub_g, traits=c("degree", "betweenness", "pagerank", "ci"))
-  high_degree <- which(sub_g_traits$degree == max(sub_g_traits$degree))
-  high_pagerank <- which(sub_g_traits$pagerank == max(sub_g_traits$pagerank))
-  high_ci <- which(sub_g_traits$ci == max(sub_g_traits$ci))
-  high_degreers <- c(high_degreers, high_degree)
-  high_pagerankers <- c(high_pagerankers, high_pagerank)
-  high_ci <- c(high_ciers, high_ci)
+community_influential <- NULL
+# For each community, create sub-graph from that community and extract set of influential nodes
+for (group in unique(V(graph)$group)) {
+  sub_g <- delete.vertices(graph, which(V(communities)$group != group))
+  traits <- get_node_influence_traits(sub_g, traits=c("degree", "betweenness", "pagerank", "ci"))
+  inf_metric <- traits$ci
+  community_influential <- c(community_influential, names(which(inf_metric == max(inf_metric))))
 }
+# Create a graph of influential nodes from all communities
+sub_g <- induced_subgraph(graph, V(graph)[community_influential])
+plot(sub_g)
 
+# Identify disconnected communities
+degrees <- degree(sub_g)
+non_inf_communities <- V(sub_g)[which(degrees == 0)]$group
+
+# Separate out all nodes from original graph which belong to disconnected communities
+non_inf_nodes <- V(graph)[which(V(graph)$group %in% non_inf_communities)]
+match <- length(influential[influential %in% non_inf_nodes]) / length(influential)
+match
+
+# Plot the graph, showing communities
+graph$layout <- layout.circle
+V(graph)$color <- "green"
+V(graph)[influential]$color = "red"
+plot(graph)

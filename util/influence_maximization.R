@@ -86,9 +86,6 @@ optimal_maximization <- function(graph, seed_size, runs=3, model=c("IC", "LT"), 
   combinations <- cbind(combinations, 0)
   if (parallel) {
     loginfo("Executing optimal_maximization in parallel")
-    require(parallel)
-    require(foreach)
-    require(doSNOW) # For linux, use doMC package instead
     cores <- detectCores() - 1
     cl <- makeCluster(cores)
     registerDoSNOW(cl)
@@ -198,11 +195,8 @@ greedy_influence <- function(graph, budget, steps, model, prob) {
 #' greedy_influence(graph, budget=2, steps=5, "LT", prob=0.5)
 #' greedy_influence(graph, budget=5, steps=99, "IC", prob=0.5)
 greedy_influence_parallel <- function(graph, budget, steps, model, prob, parallel=FALSE) {
-  require(parallel)
   cores <- detectCores() - 1
-  require(foreach)
   cl <- makeCluster(cores)
-  require(doSNOW)
   registerDoSNOW(cl)
   start <- as.numeric(Sys.time())
   # Save list of nodes
@@ -300,6 +294,7 @@ influence_ic <- function(graph, seed, steps, prob) {
   # Summary
   output$influence <- influence
   output$time <- (end - start)
+  output$activated <- seed
   output
 }
 
