@@ -5,8 +5,14 @@ Created on Sat Sep 21 19:14:09 2019
 @author: owaishussain@outlook.com
 """
 
-from igraph import *
 from enum import Enum
+from igraph import Graph
+import numpy as np
+import powerlaw
+import random
+import plot_util as pu
+import networkx as nx
+
 
 class Trait(Enum):
     DEGREE = 1
@@ -18,155 +24,105 @@ class Trait(Enum):
     COLLECTIVE_INFLUENCE = 7
 
 
+def normalize(x):
+    '''
+    Returns the normalized list of given list between 0 and 1
+    Args:
+        x: list of values
+    '''
+    x = np.array(x)
+    x = (x - min(x)) / (max(x) - min(x))
+    return x.tolist()
+
+
+def convert_igraph_to_networkx(graph):
+    nxg = nx.DiGraph()
+    names = graph.vs['name']
+    nxg.add_nodes_from(names)
+    nxg.add_edges_from([(names[x[0]], (names[x[1]])) for x in graph.get_edgelist()])
+    return nxg
+
+
+def convert_networkx_to_igraph(nx_graph):
+    graph = Graph()
+    graph.add_vertices(nx_graph.nodes())
+    graph.add_edges(nx_graph.edges())
+    return graph
+
+
 def create_graph(vertices, edges):
     '''
     Returns an igraph object
-    vertices is the set of vertices
-    edges is the set of edges
+    Args:
+        vertices: the number of vertices to add
+        edges: list of edges like [(0,2), (1,2)]
     '''
-    pass
+    graph = Graph()
+    graph.add_vertices(vertices)
+    graph.add_edges(edges)
+    return graph
 
 
-def create_graph_edgelist(edgelist):
+def create_edgelist_graph(edgelist_file, directed=False, weights=False):
     '''
-    Returns an igraph object
-    edgelist is the list of tuples of edges to form the graph
+    Returns an igraph object by reading edges from a file
+    Args:
+        edgelist_file: is the name of the file containing edges (from_id to_id)
+        directed: is the network directed
+        weights: is the network weighted
     '''
-    pass
+    graph = Graph.Read_Ncol(edgelist_file, directed=directed, weights=weights)
+    return graph
 
 
-def create_graph_file(file):
-    '''
-    Returns an igraph object
-    file is the file to read the graph from
-    '''
-    pass
-
-
-def fit_power_law(graph):
+def fit_power_law(graph, plot=True):
     '''
     Plots degree distribution and returns power-law exponent of given graph
-    graph is the igraph object
+    Args:
+        graph: the igraph object
+        plot: whether to plot the graph
+    Returns:
+        alpha: the power law exponent
     '''
-    pass
+    fit = powerlaw.Fit(np.array(graph.degree()) + 1, xmin=1, discrete=True)
+    if (plot):
+        fit.power_law.plot_pdf(color='b', linestyle='--', label='fit ccdf')
+        fit.plot_pdf(color='r')
+    return fit.power_law.alpha
 
 
 def get_graph_summary(graph):
     '''
     Returns a summary of common metrics of given graph
-    graph is the igraph object
+    Args:
+        graph:the igraph object
     '''
-    pass
+    summary = get_graph_traits(graph, traits=[Trait.DEGREE, Trait.BETWEENNESS, Trait.CLOSENESS, Trait.CORENESS, Trait.EIGENVALUE],
+                               normalize=True)
+    summary["vertices"] = graph.vcount()
+    summary["edges"] = graph.ecount()
+    summary["edge_vertex_ratio"] = graph.ecount() / graph.vcount()
+    summary["average_degree"] = sum(summary["degree"]) / graph.vcount()
+    summary["highest_degree"] = max(summary["degree"])
+    summary["density"] = graph.density(loops=False)
+    summary["diameter"] = graph.diameter()
+    summary["transitivity"] = graph.transitivity_undirected(mode="nan")
+    cliques = graph.cliques(min=3, max=3)
+    summary["graph_triads"] = len(cliques)
+    summary["average_distance"] = None
+    summary["girth"] = None
+    return summary
 
 
-def get_graph_traits(graph, traits=[Trait.DEGREE, Trait.BETWEENNESS, Trait.CLOSENESS, Trait.PAGERANK], normalize=False):
+def plot_graph(graph, save_to_file=False, file_name="graph.png"):
     '''
-    Returns several traits from given graph
-    graph is the igraph object
-    vertices is the set of vertices to compute traits for
-    traits is the list of traits to calculate for given parameters
+    Plot the graph on screen. The igraph object is first converted into NetworkX object, which is then plotted
+        graph: the igraph object
+        file_name: the name of the file with path where graph will be stored. Not applicable if save_to_file is False
+        save_to_file: when true, the graph will be saved on disk as an image
     '''
-    pass
-
-
-def get_vertex_traits(graph, vertices, traits=[Trait.DEGREE, Trait.BETWEENNESS, Trait.CLOSENESS, Trait.PAGERANK], normalize=False):
-    '''
-    Returns several traits from given graph and set of vertices
-    graph is the igraph object
-    vertices is the set of vertices to compute traits for
-    traits is the list of traits to calculate for given parameters
-    normalize when True, the data will be normalized between 0 and 1
-    '''
-    pass
-
-
-def get_largest_component(graph):
-    '''
-    Returns a subgraph, which is the largest connected component of a graph
-    graph is the igraph object
-    '''
-    pass
-
-
-def generate_tree(size, children=2, directed=False):
-    '''
-    Returns a tree graph
-    size is the number of vertices in the graph
-    children is the number of child vertices each parent vertex will have
-    directed when True, the generated graph will be directed
-    '''
-    pass
-
-
-def generate_ring(size, distance=2, directed=False):
-    '''
-    Returns a ring graph
-    size is the number of vertices in the graph
-    children is the number of child vertices each parent vertex will have
-    directed when True, the generated graph will be directed
-    '''
-    pass
-
-
-def generate_clique(size):
-    '''
-    Returns a clique graph
-    size is the number of vertices in the graph
-    '''
-    pass
-
-
-def generate_random(size, probability=0.1, directed=False, cycles=False):
-    '''
-    Returns an Erdos Renyi random graph
-    size is the number of vertices in the graph
-    probability is the random probability of an edge between two vertices
-    directed when True, the generated graph will be directed
-    cycles when True, the generated graph will contain cycles of connected vertices
-    '''
-    pass
-
-
-def generate_scale_free(size, preference_power=1, directed=False, cycles=False):
-    '''
-    Returns a scale-free graph based on Barabasi model, i.e. rewiring a random graph, while keeping the degree distribution consistent
-    size is the number of vertices in the graph
-    preference_power is the power of preference of attachment. Default value 1 denotes that the preference is linear
-    directed when True, the generated graph will be directed
-    cycles when True, the generated graph will contain cycles of connected vertices
-    '''
-    pass
-
-
-def generate_small_world(size, probability=0.1, directed=False, cycles=False):
-    '''
-    Returns a small world graph based on Watts and Strogatz model, i.e. rewiring a random graph, while keeping the degree distribution consistent
-    size is the number of vertices in the graph
-    probability is the random probability of an edge between two vertices
-    directed when True, the generated graph will be directed
-    cycles when True, the generated graph will contain cycles of connected vertices
-    '''
-    pass
-
-
-def generate_holme_and_kim(size, probability=0.1, directed=False, cycles=False):
-    '''
-    Returns a scale-free graph with relatively high clustering
-    size is the number of vertices in the graph
-    probability is the random probability of an edge between two vertices
-    directed when True, the generated graph will be directed
-    cycles when True, the generated graph will contain cycles of connected vertices
-    '''
-    pass
-
-
-def plot_graph(graph, save_to_file=False, file_name):
-    '''
-    Plot the graph on screen
-    save_to_file when true, the graph will be saved on disk as an image
-    file_name is the name of the file with path where graph will be stored. Not applicable if save_to_file is False
-    '''
-    pass
+    nxg = convert_igraph_to_networkx(graph)
+    pu.plot_random(nxg, save_to_file=save_to_file, file_name=file_name)
 
 
 def plot_distribution(graph, trait=Trait.DEGREE):
@@ -175,6 +131,119 @@ def plot_distribution(graph, trait=Trait.DEGREE):
     graph is the igraph object
     trait is the Trait for which the plot will be generated
     '''
+    pass
+
+
+def get_graph_traits(graph, traits=[Trait.DEGREE, Trait.BETWEENNESS, Trait.CLOSENESS, Trait.PAGERANK], normalize=False):
+    '''
+    Returns several traits from given graph
+    Args:
+        graph: the igraph object
+        traits: the list of traits to calculate for given parameters
+        normalize: whether to normalize the traits between 0 and 1
+    '''
+    graph_traits = {}
+    if (Trait.DEGREE in traits):
+        graph_traits["degree"] = graph.degree()
+    if (Trait.BETWEENNESS in traits):
+        graph_traits["betweenness"] = graph.betweenness()
+    if (Trait.CLOSENESS in traits):
+        graph_traits["closeness"] = graph.closeness()
+    if (Trait.CORENESS in traits):
+        graph_traits["coreness"] = graph.coreness()
+    if (Trait.EIGENVALUE in traits):
+        graph_traits["eigenvalue"] = graph.evcent(return_eigenvalue=True)[0]
+    if (Trait.PAGERANK in traits):
+        graph_traits["pagerank"] = graph.pagerank()
+    # TODO COLLECTIVE_INFLUENCE
+    if (normalize):
+        for key, values in graph_traits.items():
+            graph_traits[key] = normalize(graph_traits[key])
+    return graph_traits
+
+
+def get_largest_component(graph):
+    '''
+    Returns a subgraph, which is the largest connected component of a graph
+    Args:
+        graph: the igraph object
+    '''
+    graph = Graph()
+    cl = graph.clusters()
+    return cl.giant()
+
+
+def generate_tree(size, children=2, directed=False):
+    '''
+    Returns a tree graph
+    Args:
+        size: the number of vertices in the graph
+        children: the number of child vertices each parent vertex will have
+        directed: whether the generated graph will be directed
+    '''
+    graph = Graph.Tree(n=size, children=children)
+    return graph
+
+
+def generate_ring(size, distance=2, directed=False):
+    '''
+    Returns a ring graph
+    Args:
+        size: is the number of vertices in the graph
+        children: is the number of child vertices each parent vertex will have
+        directed: whether the generated graph will be directed
+    '''
+    graph = Graph.Ring(size, mutual=False, circular=True, directed=directed)
+    return graph
+
+
+def generate_random(size, probability=0.1, directed=False):
+    '''
+    Returns an Erdos Renyi random graph
+    Args:
+        size: the number of vertices in the graph
+        probability: the random probability of an edge between two vertices
+        directe: whether the generated graph will be directed
+    '''
+    graph = Graph.Erdos_Renyi(size, p=probability, directed=directed, loops=False)
+    return graph
+
+
+def generate_scale_free(size, preference_power=1, directed=False):
+    '''
+    Returns a scale-free graph based on Barabasi model, i.e. rewiring a random graph, while keeping the degree distribution consistent
+    Args:
+        size: is the number of vertices in the graph
+        preference_power: is the power of preference of attachment. Default value 1 denotes that the preference is linear
+        directed: whether the generated graph will be directed
+    '''
+    graph = Graph.Barabasi(n=size, zero_appeal=preference_power, implementation="psumtree", outpref=True, directed=directed, start_from=None)
+    return graph
+
+
+def generate_small_world(size, neighborhood=1, probability=0.1, directed=False):
+    '''
+    Returns a small world graph based on Watts and Strogatz model, i.e. rewiring a random graph, while keeping the degree distribution consistent
+    Args:
+        size: the number of vertices in the graph
+        neighborhood: the distance (number of steps) within which two vertices will be connected
+        probability: the random probability of an edge between two vertices
+        directed: whether the generated graph will be directed
+    '''
+    graph = Graph.Watts_Strogatz(dim=1, size=size, nei=neighborhood, p=probability, directed=directed)
+    return graph
+
+
+def generate_small_world_scale_free(size, probability=0.1, seed=None, directed=False):
+    '''
+    Returns a scale-free graph with relatively high clustering
+    Args:
+        size: the number of vertices in the graph
+        probability: the random probability of an edge between two vertices
+        directed: whether the generated graph will be directed
+    '''
+    if seed is not None:
+        random.seed(seed)
     pass
 
 

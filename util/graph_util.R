@@ -123,13 +123,13 @@ get_node_influence_traits <- function(graph, normalize=FALSE, traits=c("betweenn
 }
 
 normalize_trait <- function(x) {
-  pnorm(x, mean(x), sd(x))  
+  pnorm(x, mean(x), sd(x))
 }
 
 #' This function can be used to normalize a set of numeric variables in a dataset between 0 and 1. Non-numeric data will be skipped
 #' @name normalize_data
 #' @param data is data frame to be normalized
-#' @param columns is list of columns to be normalized 
+#' @param columns is list of columns to be normalized
 normalize_data <- function(data, columns) {
   for (column in columns) {
     # Skip non-numeric data
@@ -172,7 +172,7 @@ fit_power_law = function(graph) {
   degree = degree[nonzero]
   # plot
   plot(probability ~ degree, log="xy", xlab="Degree (log)", ylab="Probability (log)", col=1, main="Degree Distribution")
-  # Return alpha, the exponent of fitted power-law 
+  # Return alpha, the exponent of fitted power-law
   igraph::fit_power_law(degree(graph))[2]
 }
 
@@ -266,36 +266,36 @@ net.holme.kim <- function( n, m, pt ){
   if (n<0 | n%%1!=0) stop("Parameter 'n' must be positive integer", call. = FALSE)
   if (m<1 | m%%1!=0) stop("Parameter 'm' must be integer  greater than 1", call. = FALSE)
   if (pt<0 | pt>1) stop("Parameter 'pt' must be in (0,1)", call. = FALSE)
-  neilist <- list()
-  neilist[n] <- list(NULL)
+  graph <- list()
+  graph[n] <- list(NULL)
   ##Create the m0 graph + (m+1)node
-  neilist[[m+1]] <- seq(m)
+  graph[[m+1]] <- seq(m)
   for ( k in seq(m)) {
-    neilist[[k]] <- m+1
+    graph[[k]] <- m+1
   }
   df <- c( rep(1,m),m,rep(0,n-m-1))
   for (i in (m+2):n){
     pa.neighbor <- sample(seq(n),1,prob = df)
-    neilist[[i]] <- pa.neighbor
-    neilist[[pa.neighbor]] <- c(neilist[[pa.neighbor]],i)
+    graph[[i]] <- pa.neighbor
+    graph[[pa.neighbor]] <- c(graph[[pa.neighbor]],i)
     df[pa.neighbor] <- df[pa.neighbor] + 1
     for (j in seq(2,m) ) {
-      pool <- setdiff( neilist[[pa.neighbor]], c(i,neilist[[i]]) )
+      pool <- setdiff( graph[[pa.neighbor]], c(i,graph[[i]]) )
       if ( stats::runif(1) <= pt && length( pool ) !=0 ) {
         tf.neighbor <- sample(pool, 1)
-        neilist[[i]] <- c(neilist[[i]], tf.neighbor)
-        neilist[[tf.neighbor]] = c(neilist[[tf.neighbor]],i)
+        graph[[i]] <- c(graph[[i]], tf.neighbor)
+        graph[[tf.neighbor]] = c(graph[[tf.neighbor]],i)
         df[tf.neighbor] <- df[tf.neighbor] + 1
       } else {
-        pa.neighbor <- sample( seq(n)[-neilist[[i]]],1,prob = df[-neilist[[i]]] )
-        neilist[[i]] <- c(neilist[[i]], pa.neighbor)
-        neilist[[pa.neighbor]] <- c(neilist[[pa.neighbor]],i)
+        pa.neighbor <- sample( seq(n)[-graph[[i]]],1,prob = df[-graph[[i]]] )
+        graph[[i]] <- c(graph[[i]], pa.neighbor)
+        graph[[pa.neighbor]] <- c(graph[[pa.neighbor]],i)
         df[pa.neighbor] <- df[pa.neighbor] + 1
       }
     }
     df[i] <- m
   }
-  neilist
+  graph
 }
 
 #' This function returns largest connected component in a network
