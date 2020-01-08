@@ -45,7 +45,7 @@ seeds <- c(2, 3, 5, 8, 13, 21)
 prob <- 0.1
 
 # Repeat experiement for multiple sizes
-sizes <- c(45)
+sizes <- c(10, 15, 20, 25, 30, 35)
 for (size in sizes) {
   budget <- size * prob
   # SCALE FREE
@@ -171,11 +171,11 @@ for (size in sizes) {
 
 arxiv <- largest_component(read.graph("dataset/arxiv_collaboration.txt", directed=FALSE))
 karate <- largest_component(read.graph("dataset/karate_club.txt", directed=FALSE))
-mytwitter <- largest_component(read.graph("dataset/my_twitter_network.txt", directed=FALSE))
 nematode <- largest_component(read.graph("dataset/nematode_neural_network.txt", directed=FALSE))
 politics <- largest_component(read.graph("dataset/political_blog.txt", directed=FALSE))
 protein <- largest_component(read.graph("dataset/protein_barabasi.txt", directed=FALSE))
 trade <- largest_component(read.graph("dataset/world_trade.txt", directed=FALSE))
+mytwitter <- (read.graph("dataset/my_twitter_network.txt", directed=FALSE, format="ncol"))
 citation <- largest_component(read.graph("dataset/citation_network_influence.txt", directed=FALSE, format="ncol"))
 
 graphs <- list(arxiv, football, karate, mytwitter, nematode, politics, protein, trade, citation)
