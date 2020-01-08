@@ -52,7 +52,7 @@ for (i in 1:nrow(results)) {
 train <- normalize_data(train, columns=c("degree", "closeness", "betweenness", "eigenvalue", "eccentricity", "graph_avg_degree"))
 
 ## Learn prediction model
-formula <- influential ~ degree + closeness + betweenness + eigenvalue + eccentricity + pagerank # + graph_clust_coef + graph_density + graph_assortativity + graph_apl
+formula <- influential ~ degree + closeness + betweenness + eigenvalue + eccentricity + pagerank + graph_clust_coef + graph_density + graph_assortativity + graph_apl
 
 start <- Sys.time()
 method <- "lm" # lm, rpart, svm, rforest, nnet, cboost
@@ -90,18 +90,18 @@ jdk <- largest_component(read.graph("Experiments/data/jdk6_dependencies.txt", di
 wordnet <- largest_component(read.graph("Experiments/data/wordnet.txt", directed=FALSE))
 
 graphs <- list(author, ita2000, caida, jdk, wordnet)
-
 for(graph in graphs) {
   print(fit_power_law(graph))
-  test <- get_graph_traits(graph)
-  # Collective influences
-  test$ci <- sapply(V(graph), function(x) { collective_influence(graph, neighborhood_distance=2, x) })
-  # Coreness
-  test$coreness <- coreness(graph)
-
+  test <- get_node_influence_traits(graph)
+}
+  
+for(graph in graphs) {
+  print(fit_power_law(graph))
+  node_traits <- c("degree", "closeness", "eigenvalue", "coreness", "pagerank", "ci")
+  graph_traits <- c("graph_size", "graph_edges", "graph_avg_degree", "graph_max_degree", "graph_clust_coef", "graph_density", "graph_assortativity", "graph_triads", "graph_girth")
+  test <- get_graph_traits(graph=graph, node_traits=node_traits, graph_traits=graph_traits)
   test$graph_id <- UUIDgenerate()
-  test <- normalize_data(test, columns=c("degree", "closeness", "betweenness", "eigenvalue", "eccentricity", "graph_avg_degree", "ci", "coreness"))
-
+  
   # Make predictions using model
   test$prediction_prob <- predict(model, newdata=test, type="response")
 
@@ -109,32 +109,32 @@ for(graph in graphs) {
   results <- NULL
   size <- nrow(test) * 0.05
   # By degree
-  inf <- arrange(test, desc(degree))[1:size, "node"]
+  inf <- arrange(test, desc(degree))[1:size, "name"]
   results$degree <- resilience(graph, V(graph)[inf])
   # By betweenness
-  inf <- arrange(test, desc(betweenness))[1:size, "node"]
+  inf <- arrange(test, desc(betweenness))[1:size, "name"]
   results$betweenness <- resilience(graph, V(graph)[inf])
   # By closeness
-  inf <- arrange(test, desc(closeness))[1:size, "node"]
+  inf <- arrange(test, desc(closeness))[1:size, "name"]
   results$closeness <- resilience(graph, V(graph)[inf])
   # By Eigen-vector centrality
-  inf <- arrange(test, desc(eigenvalue))[1:size, "node"]
+  inf <- arrange(test, desc(eigenvalue))[1:size, "name"]
   results$eigenvalue <- resilience(graph, V(graph)[inf])
   # By pagerank
-  inf <- arrange(test, desc(pagerank))[1:size, "node"]
+  inf <- arrange(test, desc(pagerank))[1:size, "name"]
   results$pagerank <- resilience(graph, V(graph)[inf])
   # By eccentricity
-  inf <- arrange(test, desc(eccentricity))[1:size, "node"]
+  inf <- arrange(test, desc(eccentricity))[1:size, "name"]
   results$eccentricity <- resilience(graph, V(graph)[inf])
   # By coreness
-  inf <- arrange(test, desc(coreness))[1:size, "node"]
+  inf <- arrange(test, desc(coreness))[1:size, "name"]
   results$coreness <- resilience(graph, V(graph)[inf])
   # By collective influence
-  inf <- arrange(test, desc(ci))[1:size, "node"]
+  inf <- arrange(test, desc(ci))[1:size, "name"]
   results$ci <- resilience(graph, V(graph)[inf])
   
   # Resilience by model. Pick top n by probability
-  inf <- arrange(test, desc(prediction_prob))[1:size, "node"]
+  inf <- arrange(test, desc(prediction_prob))[1:size, "name"]
   results$model <- resilience(graph, V(graph)[inf])
   print(unlist(results))
 }
@@ -142,3 +142,5 @@ for(graph in graphs) {
 
 #### CONCLUSION:
 # The model outperforms other traits as long as the graph size is included in the model learnt
+
+graph <- largest_component(read.graph("Experiments/data/author_netscience.txt", directed=FALSE))

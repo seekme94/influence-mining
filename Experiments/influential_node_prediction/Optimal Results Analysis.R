@@ -21,8 +21,10 @@ source('util/graph_util.R')
 source('util/classification_util.R')
 source('util/influence_maximization.R')
 
+root_dir <- "Experiments/influential_node_prediction/"
+
 # Read the results
-results <- fromJSON(paste(readLines("Experiments/results/optimal_results.json")))
+results <- fromJSON(paste(readLines(paste(root_dir, "optimal_nodes.json", sep=''))))
 
 data <- NULL
 cores <- 8
@@ -30,7 +32,7 @@ cores <- 8
 # For all rows in results
 for (i in 1:nrow(results)) {
   # Graph ID
-  graph_id <- paste('Experiments/data/optimal/graph_', results[i, "size"], "_", results[i, "uuid"], sep='')
+  graph_id <- paste(root_dir, "optimal/graph_", results[i, "size"], "_", results[i, "uuid"], sep='')
   # Read the respective graph data
   graph <- read.csv(paste(graph_id, ".csv", sep=''))
   # Add a graph ID column
