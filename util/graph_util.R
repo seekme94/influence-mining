@@ -20,9 +20,10 @@ graph_summary <- function(graph, plot=FALSE) {
   o$average_distance <- mean_distance(graph)
   o$graph_triads <- length(triangles(graph))
   o$girth <- girth(graph)$girth
+  o$power_law <- fit_power_law(graph)$alpha
   if (plot) {
-    tkplot(graph)
     hist(degree(graph))
+    tkplot(graph)
   }
   o
 }
@@ -31,34 +32,49 @@ graph_summary <- function(graph, plot=FALSE) {
 #' @name get_graph_traits
 #' @param graph is the igraph object
 #' @param normalize uses pnorm function to normalize the traits. Default is FALSE
+#' @param traits is the vector of several graph/node metrices
 #' @return data frame containing graph and its traits
-get_graph_traits <- function(graph, normalize=FALSE) {
-  degrees <- degree(graph)
-  # Allocate node indices as node names
-  V(graph)$name <- 1:vcount(graph)
-  data <- data.frame(node=V(graph)$name,
-                     degree=degrees,
-                     closeness=closeness(graph),
-                     betweenness=betweenness(graph),
-                     eigenvalue=eigen_centrality(graph)$vector,
-                     eccentricity=eccentricity(graph),
-                     pagerank=page_rank(graph)$vector,
-                     graph_size=vcount(graph),
-                     graph_edges=ecount(graph),
-                     graph_avg_degree=mean(degrees),
-                     graph_max_degree=max(degrees),
-                     graph_apl=average.path.length(graph),
-                     graph_clust_coef=transitivity(graph),
-                     graph_diameter=diameter(graph),
-                     graph_density=graph.density(graph),
-                     graph_assortativity=assortativity.degree(graph),
-                     avg_distance=mean_distance(graph),
-                     graph_triads=length(triangles(graph)),
-                     graph_girth=girth(graph)$girth)
-  if (normalize) {
-    for (trait in c("degree","closeness","betweenness","eigenvalue","eccentricity","pagerank")) {
-      data[,trait] <- normalize_trait(data[,trait])
-    }
+get_graph_traits <- function(graph, normalize=FALSE, 
+  node_traits=c("degree", "betweenness", "closeness", "eigenvalue", "eccentricity", "coreness", "pagerank", "ci", "a-degree", "a-betweenness", "a-closeness", "a-eigenvalue", "a-coreness", "a-pagerank", "a-ci"), 
+  graph_traits=c("graph_size", "graph_edges", "graph_avg_degree", "graph_max_degree", "graph_apl", "graph_clust_coef", "graph_diameter", "graph_density", "graph_assortativity", "graph_avg_distance", "graph_triads", "graph_girth")) {
+  
+  # First, fetch all the node traits
+  data <- get_node_influence_traits(graph, normalize=normalize, traits=node_traits)
+  if ("graph_size" %in% graph_traits) {
+    data$graph_size <- vcount(graph)
+  }
+  if ("graph_edges" %in% graph_traits) {
+    data$graph_edges <- ecount(graph)
+  }
+  if ("graph_avg_degree" %in% graph_traits) {
+    data$graph_avg_degree <- mean(data$degree)
+  }
+  if ("graph_max_degree" %in% graph_traits) {
+    data$graph_max_degree <- max(data$degree)
+  }
+  if ("graph_apl" %in% graph_traits) {
+    data$graph_apl <- average.path.length(graph)
+  }
+  if ("graph_clust_coef" %in% graph_traits) {
+    data$graph_clust_coef <- transitivity(graph)
+  }
+  if ("graph_diameter" %in% graph_traits) {
+    data$graph_diameter <- diameter(graph)
+  }
+  if ("graph_density" %in% graph_traits) {
+    data$graph_density <- graph.density(graph)
+  }
+  if ("graph_assortativity" %in% graph_traits) {
+    data$graph_assortativity <- assortativity.degree(graph)
+  }
+  if ("graph_avg_distance" %in% graph_traits) {
+    data$graph_avg_distance <- mean_distance(graph)
+  }
+  if ("graph_triads" %in% graph_traits) {
+    data$graph_triads <- length(triangles(graph))
+  }
+  if ("graph_girth" %in% graph_traits) {
+    data$graph_girth <- girth(graph)$girth
   }
   data
 }
@@ -71,7 +87,7 @@ get_graph_traits <- function(graph, normalize=FALSE) {
 #' @return data frame containing graph and its traits
 get_node_influence_traits <- function(graph, normalize=FALSE, traits=c("betweenness", "closeness", "eigenvalue", "coreness", "pagerank", "ci", "a-degree", "a-betweenness", "a-closeness", "a-eigenvalue", "a-coreness", "a-pagerank", "a-ci")) {
   data <- NULL
-  data$name <- 1:vcount(graph)
+  data$name <- 1:vcount(graph) - 1
   data$degree <- degree(graph)
   if ("betweenness" %in% traits) {
     data$betweenness <- betweenness(graph)
@@ -81,6 +97,9 @@ get_node_influence_traits <- function(graph, normalize=FALSE, traits=c("betweenn
   }
   if ("eigenvalue" %in% traits) {
     data$eigenvalue <- evcent(graph)$vector
+  }
+  if ("eccentricity" %in% traits) {
+    data$eccentricity <- eccentricity(graph)
   }
   if ("coreness" %in% traits) {
     data$coreness <- coreness(graph)
