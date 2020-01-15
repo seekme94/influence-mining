@@ -17,6 +17,7 @@ library(iterpc)
 library(future.apply)
 
 source('util/graph_util.R')
+source('util/heuristics.R')
 source('util/influence_maximization.R')
 
 root_dir <- "Experiments/influential_node_prediction/"
@@ -45,7 +46,7 @@ seeds <- c(2, 3, 5, 8, 13, 21)
 prob <- 0.1
 
 # Repeat experiement for multiple sizes
-sizes <- c(10, 15, 20, 25, 30, 35)
+sizes <- c()
 for (size in sizes) {
   budget <- size * prob
   # SCALE FREE
@@ -103,7 +104,7 @@ for (size in sizes) {
 #### Greedy approach for large size 
 ###################################
 
-sizes <- seq(from=1000, to=2500, by=500)
+sizes <- c()
 prob <- 0.025
 
 #** Note: Using future.apply functions to execute in parallel
@@ -169,24 +170,20 @@ for (size in sizes) {
 #### Greedy on Real Datasets 
 ###################################
 
-arxiv <- largest_component(read.graph("dataset/arxiv_collaboration.txt", directed=FALSE))
-karate <- largest_component(read.graph("dataset/karate_club.txt", directed=FALSE))
-nematode <- largest_component(read.graph("dataset/nematode_neural_network.txt", directed=FALSE))
-politics <- largest_component(read.graph("dataset/political_blog.txt", directed=FALSE))
-protein <- largest_component(read.graph("dataset/protein_barabasi.txt", directed=FALSE))
-trade <- largest_component(read.graph("dataset/world_trade.txt", directed=FALSE))
-mytwitter <- (read.graph("dataset/my_twitter_network.txt", directed=FALSE, format="ncol"))
-citation <- largest_component(read.graph("dataset/citation_network_influence.txt", directed=FALSE, format="ncol"))
+datasets <- c("karate_club.txt", "world_trade.txt", "nematode_neural_network.txt", "my_twitter_network.txt", "political_blog.txt", "citation_network_influence.txt", "protein_barabasi.txt")
+# Deal with this large graph: "arxiv_collaboration.txt"
 
-graphs <- list(arxiv, football, karate, mytwitter, nematode, politics, protein, trade, citation)
-graph_summary(trade)
-
-for (graph in graphs) {
-  budget <- size * prob
+for (dataset in datasets) {
+  graph <- largest_component(read.graph(paste("dataset/", dataset, sep=''), directed=FALSE, format="ncol"))
+  size <- vcount(graph)
+  prob <- 0.1
+  if (size > 50) {
+    prob <- 0.025
+  }
   #  for (seed in seeds) {
   future_lapply(seeds, function(seed) {
     set.seed(seed)
-    experiment <- paste("Resilience experiment on Scale-free graph_", "generate_scale_free(size=", size, ",", "preference=1)", sep='')
+    experiment <- paste("Resilience experiment on graph_", dataset, "(size=", size, ",", "probability=", prob, ")", sep='')
     print(experiment)
     V(graph)$name <- 1:vcount(graph) - 1
     start <- as.numeric(Sys.time())
