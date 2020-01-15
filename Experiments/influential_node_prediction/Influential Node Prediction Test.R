@@ -25,14 +25,16 @@ source('util/classification_util.R')
 source('util/influence_maximization.R')
 source('util/heuristics.R')
 
+root_dir <- "Experiments/influential_node_prediction/"
+
 # Read the results
-results <- fromJSON(paste(readLines("Experiments/results/optimal_results.json")))
+results <- fromJSON(paste(readLines(paste(root_dir, "optimal_results.json", sep=''))))
 
 train <- NULL
 # Read data for model training
 for (i in 1:nrow(results)) {
   # Graph ID
-  graph_id <- paste('Experiments/data/optimal/graph_', results[i, "size"], "_", results[i, "uuid"], sep='')
+  graph_id <- paste(root_dir, "data/graph_", results[i, "size"], "_", results[i, "uuid"], sep='')
   # Read the respective graph data
   graph <- read.csv(paste(graph_id, ".csv", sep=''))
   # Add a graph ID column
@@ -49,10 +51,11 @@ for (i in 1:nrow(results)) {
 }
 
 # Normalize data
-train <- normalize_data(train, columns=c("degree", "closeness", "betweenness", "eigenvalue", "eccentricity", "graph_avg_degree"))
+train <- normalize_data(train, columns=c("degree", "betweenness", "closeness", "eigenvalue", "eccentricity", "coreness", "pagerank", "ci", "a_degree", "a_betweenness", "a_closeness", "a_eigenvalue", "a_coreness", "a_pagerank", "a_ci"))
 
 ## Learn prediction model
-formula <- influential ~ degree + closeness + betweenness + eigenvalue + eccentricity + pagerank + graph_clust_coef + graph_density + graph_assortativity + graph_apl
+#formula <- influential ~ degree + betweenness + closeness + eigenvalue + eccentricity + coreness + pagerank + ci + a_degree + a_betweenness + a_closeness + a_eigenvalue + a_coreness + a_pagerank + a_ci + graph_size + graph_edges + graph_avg_degree + graph_max_degree + graph_apl + graph_clust_coef + graph_diameter + graph_density + graph_assortativity + graph_avg_distance + graph_triads + graph_girth
+formula <- influential ~ degree + closeness + eigenvalue + coreness + pagerank + ci + graph_size + graph_edges + graph_avg_degree + graph_max_degree + graph_clust_coef + graph_density + graph_assortativity + graph_triads + graph_girth
 
 start <- Sys.time()
 method <- "lm" # lm, rpart, svm, rforest, nnet, cboost
@@ -83,18 +86,14 @@ summary(model)
 
 
 # Read test data set
-author <- largest_component(read.graph("Experiments/data/author_netscience.txt", directed=FALSE))
-ita2000 <- largest_component(read.graph("Experiments/data/ita2000.txt", directed=FALSE))
-caida <- largest_component(read.graph("Experiments/data/as-caida.txt", directed=FALSE))
-jdk <- largest_component(read.graph("Experiments/data/jdk6_dependencies.txt", directed=FALSE))
-wordnet <- largest_component(read.graph("Experiments/data/wordnet.txt", directed=FALSE))
+author <- largest_component(read.graph("dataset/author_netscience.txt", directed=FALSE))
+ita2000 <- largest_component(read.graph("dataset/ita2000.txt", directed=FALSE))
+caida <- largest_component(read.graph("dataset/as-caida.txt", directed=FALSE))
+jdk <- largest_component(read.graph("dataset/jdk6_dependencies.txt", directed=FALSE))
+#wordnet <- largest_component(read.graph("dataset/wordnet.txt", directed=FALSE))
 
-graphs <- list(author, ita2000, caida, jdk, wordnet)
-for(graph in graphs) {
-  print(fit_power_law(graph))
-  test <- get_node_influence_traits(graph)
-}
-  
+graphs <- list(author, ita2000, caida, jdk)
+
 for(graph in graphs) {
   print(fit_power_law(graph))
   node_traits <- c("degree", "closeness", "eigenvalue", "coreness", "pagerank", "ci")
