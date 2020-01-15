@@ -180,6 +180,7 @@ for (dataset in datasets) {
   if (size > 50) {
     prob <- 0.025
   }
+  budget <- size * prob
   #  for (seed in seeds) {
   future_lapply(seeds, function(seed) {
     set.seed(seed)
@@ -191,7 +192,7 @@ for (dataset in datasets) {
     end <- as.numeric(Sys.time())
     min_resilience <- resilience(graph, top_nodes)
     uuid <- UUIDgenerate()
-    results <- paste('{"experiment":"', experiment, '","size":"', size, '","uuid":"', uuid, '","seed":"', seed, '","time":"', (end - start), '","date":"', date(), '","resilience":"', min_resilience, '","nodes":', toJSON(top_nodes$name), '}', sep='')
+    results <- paste('{"experiment":"', experiment, '","size":"', size, '","uuid":"', uuid, '","seed":"', seed, '","time":"', (end - start), '","date":"', date(), '","resilience":"', min_resilience, '","nodes":', toJSON(as.numeric(top_nodes$name)), '}', sep='')
     write_results(uuid=uuid, graph=graph, results=results)
   })
 }
