@@ -55,7 +55,3 @@ class TestSum(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
-
-graph = Graph.Watts_Strogatz(dim=2, size=50, nei=2, p=0.15)
-graph.summary()
-summary = gu.get_graph_traits(graph)

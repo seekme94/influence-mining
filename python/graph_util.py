@@ -7,6 +7,7 @@ Created on Sat Sep 21 19:14:09 2019
 
 from enum import Enum
 from igraph import Graph
+
 import numpy as np
 import powerlaw
 import random
@@ -26,7 +27,7 @@ class Trait(Enum):
 
 def normalize(x):
     '''
-    Returns the normalized list of given list between 0 and 1
+    Normalizes and returns the values in given list between 0 and 1
     Args:
         x: list of values
     '''
@@ -35,15 +36,33 @@ def normalize(x):
     return x.tolist()
 
 
+def attach_names_to_graph(graph):
+    '''
+    If the attribute graph.vs["name"] does not exist, then the vertex indices are set as vertex names for all vertices in in graph.vs
+    '''
+    try:
+        graph.vs["name"]
+    except KeyError:
+        graph.vs["name"] = [i for i in range(0,len(graph.vs))]
+    return graph
+
+
 def convert_igraph_to_networkx(graph):
+    '''
+    Converts the given igraph object and returns NetworkX object
+    '''
     nxg = nx.DiGraph()
-    names = graph.vs['name']
+    graph = attach_names_to_graph(graph)
+    names = graph.vs["name"]
     nxg.add_nodes_from(names)
     nxg.add_edges_from([(names[x[0]], (names[x[1]])) for x in graph.get_edgelist()])
     return nxg
 
 
 def convert_networkx_to_igraph(nx_graph):
+    '''
+    Converts the given NetworkX object and returns igraph object
+    '''
     graph = Graph()
     graph.add_vertices(nx_graph.nodes())
     graph.add_edges(nx_graph.edges())
@@ -250,7 +269,8 @@ def generate_small_world_scale_free(size, probability=0.1, seed=None, directed=F
 def get_communities_multilevel(graph, plot=True):
     '''
     Returns an igraph object with additional 'group' property attached, representing the community each vertex belongs to
-    graph is the igraph object
+    Args:
+        graph: the igraph object
     Description: Multilevel community detection is based on Louvaine's algorithm, it is better at scaling and avoids formation of super communities. In this method, instead of merging communities, vertices are moved between communities such that each vertex makes a local decision that maximizes its own contribution to the modularity score.
     When this procedure gets stuck (i.e. none of the vertices change their membership), then all the communities are collapsed into single vertices and the process continues (thus the name multilevel).
     '''
@@ -260,7 +280,8 @@ def get_communities_multilevel(graph, plot=True):
 def get_communities_edgebetweenness(graph, plot=True):
     '''
     Returns an igraph object with additional 'group' property attached, representing the community each vertex belongs to
-    graph is the igraph object
+    Args:
+        graph: the igraph object
     Description: Edge-betweenness community detection is a hierarchical decomposition process where edges are removed in the decreasing order of their edge betweenness scores. This is motivated by the fact that edges connecting different groups are more likely to be contained in multiple shortest paths simply because in many cases they are the only option to go from one group to another.
     This method yields good results but is very slow because of the computational complexity of edge betweenness calculations and because the betweenness scores have to be re-calculated after every edge removal. Another disadvantage is that it builds a full dendrogram and does not tell where to cut the dendrogram to obtain the final groups, so we use some other measure (e.g. modularity score of the partitions) to decide that
     '''
@@ -270,7 +291,8 @@ def get_communities_edgebetweenness(graph, plot=True):
 def get_communities_eigenvector(graph, plot=True):
     '''
     Returns an igraph object with additional 'group' property attached, representing the community each vertex belongs to
-    graph is the igraph object
+    Args:
+        graph: the igraph object
     Description: Leading Eigenvector community detection is a top-down hierarchical approach that optimizes the modularity function. In each step, the graph is split into two parts in a way that the separation itself yields a significant increase in the modularity. The split is determined by evaluating the leading eigenvector of modularity matrix, and there is also a stopping condition which prevents tightly connected groups to be split further.
     Due to the eigenvector calculations involved, it might not work on degenerate graphs where the ARPACK eigenvector solver is unstable. On non-degenerate graphs, it is likely to yield a higher modularity score than the fast greedy method, although it is a bit slower.
     '''
@@ -280,18 +302,28 @@ def get_communities_eigenvector(graph, plot=True):
 def get_communities_fastgreedy(graph, plot=True):
     '''
     Returns an igraph object with additional 'group' property attached, representing the community each vertex belongs to
-    graph is the igraph object
+    Args:
+        graph: the igraph object
     Description: Fastgreedy community detection is a bottom-up hierarchical approach. It tries to optimize function modularity function in greedy manner. Initially, every vertex belongs to a separate community, and communities are merged iteratively such that each merge is locally optimal (i.e. has high increase in modularity value).
     The algorithm stops when it is not possible to increase the modularity any more, so it gives you a grouping as well as a dendrogram. The method is fast and it is the method that is usually tried as a first approximation because it has no parameters to tune.
     However, it has a limitation that communities below a given size threshold will always be merged with neighboring communities
     '''
-    pass
+    # Attach names if missing
+    graph = attach_names_to_graph(graph)
+    dendrogram = Graph.community_fastgreedy(graph)
+    clusters = dendrogram.as_clustering()
+    # Create membership vector, group in vertex space of igraph object
+    graph.vs["group"] = clusters.membership
+    if plot:
+        pu.plot_community_layout(graph)
+    return graph
 
 
 def get_communities_spinglass(graph, plot=True):
     '''
     Returns an igraph object with additional 'group' property attached, representing the community each vertex belongs to
-    graph is the igraph object
+    Args:
+        graph: the igraph object
     Description: Spinglass community detection is an approach based on Potts model. Each vertex can be in one of 'c' spin states, and the edges specify which pairs of vertices would prefer to stay in the same spin state and which ones prefer to have different spin states.
     The model is then simulated for a given number of steps, and the spin states of the vertices in the end define the communities.
     The consequences are that 1) There will never be more than 'c' communities in the end, although you can set c to as high as 200; 2) There may be less than 'c' communities in the end as some of the spin states may become empty; 3) In disconnected networks, it is not guaranteed that vertices in disconencted parts of the networks have different spin states.
@@ -303,7 +335,8 @@ def get_communities_spinglass(graph, plot=True):
 def get_communities_walktrap(graph, plot=True):
     '''
     Returns an igraph object with additional 'group' property attached, representing the community each vertex belongs to
-    graph is the igraph object
+    Args:
+        graph: the igraph object
     Description: Walktrap community detection' is the's general idea is that if you perform random walks on the graph, then the walks are more likely to stay within the same community because there are only a few edges that lead outside a given community.
     Walktrap runs short random walks of 3-4-5 steps (depending on parameters) and uses the results of these random walks to merge separate communities in a bottom-up manner like fastgreedy.community. We can use the modularity score to select where to cut the dendrogram.
     It is a bit slower than the fast greedy approach but also a bit more accurate.
@@ -314,7 +347,8 @@ def get_communities_walktrap(graph, plot=True):
 def get_communities_labelpropagation(graph, plot=True):
     '''
     Returns an igraph object with additional 'group' property attached, representing the community each vertex belongs to
-    graph is the igraph object
+    Args:
+        graph: the igraph object
     Description: Label propagation community detection is a simple approach in which every vertex is assigned one of 'k' labels. The method then proceeds iteratively and re-assigns labels to vertices in a way that each vertex takes the most frequent label of its neighbors in a synchronous manner. The method stops when the label of each vertex is one of the most frequent labels in its neighborhood.
     It is very fast but yields different results based on the initial configuration (which is decided randomly), therefore it should be run a large number of times before labeling.
     '''
@@ -324,7 +358,8 @@ def get_communities_labelpropagation(graph, plot=True):
 def get_communities_largescale(graph, plot=True):
     '''
     Returns an igraph object with additional 'group' property attached, representing the community each vertex belongs to
-    graph is the igraph object
+    Args:
+        graph: the igraph object
     Description: This function detects communities in large-scale graphs.
     '''
     pass
@@ -333,8 +368,14 @@ def get_communities_largescale(graph, plot=True):
 def get_communities_clique(graph, plot=True):
     '''
     Returns an igraph object with additional 'group' property attached, representing the community each vertex belongs to
-    graph is the igraph object
+    Args:
+        graph: the igraph object
     Description: This function detects communities using cliques.
     '''
     pass
 
+
+if __name__ == "__main__":
+    graph = Graph.Watts_Strogatz(dim=2, size=5, nei=2, p=0.15)
+    graph = get_communities_fastgreedy(graph, plot=True)
+    summary = get_graph_traits(graph)
