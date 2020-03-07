@@ -15,6 +15,8 @@ library(randomForest)
 library(C50)
 library(party)
 library(doParallel)
+library(xgboost)
+library(uuid)
 
 # Load required source files
 source('util/graph_util.R')
@@ -70,38 +72,96 @@ for (graph_id in unique(test$graph_id)) {
     graph$inf_by_degree <- 0
     graph$inf_by_degree[graph$name %in% inf_by_degree[[1]]] <- 1
   }
-  { # Label top n high-closeness nodes as influential
-    inf_by_closeness <- head(select(arrange(graph, desc(closeness)), name), influential_size)
-    graph$inf_by_closeness <- 0
-    graph$inf_by_closeness[graph$name %in% inf_by_closeness[[1]]] <- 1
-  }
   { # Label top n high-betweenness nodes as influential
     inf_by_betweenness <- head(select(arrange(graph, desc(betweenness)), name), influential_size)
     graph$inf_by_betweenness <- 0
     graph$inf_by_betweenness[graph$name %in% inf_by_betweenness[[1]]] <- 1
+  }
+  { # Label top n high-closeness nodes as influential
+    inf_by_closeness <- head(select(arrange(graph, desc(closeness)), name), influential_size)
+    graph$inf_by_closeness <- 0
+    graph$inf_by_closeness[graph$name %in% inf_by_closeness[[1]]] <- 1
   }
   { # Label top n high-eigenvalue nodes as influential
     inf_by_eigenvalue <- head(select(arrange(graph, desc(eigenvalue)), name), influential_size)
     graph$inf_by_eigenvalue <- 0
     graph$inf_by_eigenvalue[graph$name %in% inf_by_betweenness[[1]]] <- 1
   }
-  { # Label top n high-eigenvalue nodes as influential
-    inf_by_eigenvalue <- head(select(arrange(graph, desc(eigenvalue)), name), influential_size)
-    graph$inf_by_eigenvalue <- 0
-    graph$inf_by_eigenvalue[graph$name %in% inf_by_eigenvalue[[1]]] <- 1
+  { # Label top n high-eccentricity nodes as influential
+    inf_by_eccentricity <- head(select(arrange(graph, desc(eccentricity)), name), influential_size)
+    graph$inf_by_eccentricity <- 0
+    graph$inf_by_eccentricity[graph$name %in% inf_by_eccentricity[[1]]] <- 1
+  }
+  { # Label top n high-coreness nodes as influential
+    inf_by_coreness <- head(select(arrange(graph, desc(coreness)), name), influential_size)
+    graph$inf_by_coreness <- 0
+    graph$inf_by_coreness[graph$name %in% inf_by_coreness[[1]]] <- 1
   }
   { # Label top n high-pagerank nodes as influential
     inf_by_pagerank <- head(select(arrange(graph, desc(pagerank)), name), influential_size)
     graph$inf_by_pagerank <- 0
     graph$inf_by_pagerank[graph$name %in% inf_by_pagerank[[1]]] <- 1
   }
+  { # Label top n high-pagerank nodes as influential
+    inf_by_ci <- head(select(arrange(graph, desc(ci)), name), influential_size)
+    graph$inf_by_ci <- 0
+    graph$inf_by_ci[graph$name %in% inf_by_ci[[1]]] <- 1
+  }
+  #"a_degree", "a_betweenness", "a_closeness", "a_eigenvalue", "a_coreness", "a_pagerank", "a_ci"
   newtest <- rbind(newtest, graph)
 }
 test <- newtest
 
+
+get_test_data_results <- function(test, prediction_column) {
+  graph_sizes <- unique(test$graph_size[test$graph_size >= 30])
+  # Empty data set to contain results
+  resultset <- data.frame(size=c(), method=c(), accuracy=c(), pos_pred_value=c(), sensitivity=c(), specificity=c(), f1_score=c())
+  for (i in graph_sizes) {
+    # Machine learning model
+    results <- get_prediction_results(test$influential[test$graph_size == i], test[test$graph_size == i, prediction_column], '1')
+    row <- data.frame(size=i, method='ML', accuracy=results[[1]], pos_pred_value=results[[2]], sensitivity=results[[3]], specificity=results[[4]], f1_score=results[[5]])
+    resultset <- rbind(resultset, row)
+    # High degree
+    results <- get_prediction_results(test$influential[test$graph_size == i], test$inf_by_degree[test$graph_size == i], '1')
+    row <- data.frame(size=i, method='Degree', accuracy=results[[1]], pos_pred_value=results[[2]], sensitivity=results[[3]], specificity=results[[4]], f1_score=results[[5]])
+    resultset <- rbind(resultset, row)
+    # High betweenness
+    results <- get_prediction_results(test$influential[test$graph_size == i], test$inf_by_betweenness[test$graph_size == i], '1')
+    row <- data.frame(size=i, method='Betweenness', accuracy=results[[1]], pos_pred_value=results[[2]], sensitivity=results[[3]], specificity=results[[4]], f1_score=results[[5]])
+    resultset <- rbind(resultset, row)
+    # High closeness
+    results <- get_prediction_results(test$influential[test$graph_size == i], test$inf_by_closeness[test$graph_size == i], '1')
+    row <- data.frame(size=i, method='Closeness', accuracy=results[[1]], pos_pred_value=results[[2]], sensitivity=results[[3]], specificity=results[[4]], f1_score=results[[5]])
+    resultset <- rbind(resultset, row)
+    # High eigenvalue
+    results <- get_prediction_results(test$influential[test$graph_size == i], test$inf_by_eigenvalue[test$graph_size == i], '1')
+    row <- data.frame(size=i, method='Eigenvector', accuracy=results[[1]], pos_pred_value=results[[2]], sensitivity=results[[3]], specificity=results[[4]], f1_score=results[[5]])
+    resultset <- rbind(resultset, row)
+    # High eccentricity
+    results <- get_prediction_results(test$influential[test$graph_size == i], test$inf_by_eccentricity[test$graph_size == i], '1')
+    row <- data.frame(size=i, method='Eccentricity', accuracy=results[[1]], pos_pred_value=results[[2]], sensitivity=results[[3]], specificity=results[[4]], f1_score=results[[5]])
+    resultset <- rbind(resultset, row)
+    # High coreness
+    results <- get_prediction_results(test$influential[test$graph_size == i], test$inf_by_coreness[test$graph_size == i], '1')
+    row <- data.frame(size=i, method='Coreness', accuracy=results[[1]], pos_pred_value=results[[2]], sensitivity=results[[3]], specificity=results[[4]], f1_score=results[[5]])
+    resultset <- rbind(resultset, row)
+    # High pagerank
+    results <- get_prediction_results(test$influential[test$graph_size == i], test$inf_by_pagerank[test$graph_size == i], '1')
+    row <- data.frame(size=i, method='Pagerank', accuracy=results[[1]], pos_pred_value=results[[2]], sensitivity=results[[3]], specificity=results[[4]], f1_score=results[[5]])
+    resultset <- rbind(resultset, row)
+    # High collective influence
+    results <- get_prediction_results(test$influential[test$graph_size == i], test$inf_by_ci[test$graph_size == i], '1')
+    row <- data.frame(size=i, method='CI', accuracy=results[[1]], pos_pred_value=results[[2]], sensitivity=results[[3]], specificity=results[[4]], f1_score=results[[5]])
+    resultset <- rbind(resultset, row)
+  }
+  resultset
+}
+
+
 # Prediction phase
 # Formula considering both node and graph traits
-formula <- influential ~ degree + closeness + betweenness + eigenvalue + eccentricity + pagerank + graph_size + graph_edges + graph_clust_coef + graph_density + graph_assortativity + graph_girth
+formula <- influential ~ degree + closeness + betweenness + eigenvalue + eccentricity + coreness + pagerank + ci + graph_clust_coef + graph_density + graph_assortativity
 
 ## Learn prediction model
 # lm = Linear (logistic regression) model
@@ -111,132 +171,207 @@ formula <- influential ~ degree + closeness + betweenness + eigenvalue + eccentr
 # nnet = Neural network
 # ccboost = C50 boosting
 start <- Sys.time()
-method <- c("lm", "rpart", "svm") # "lm", "rpart", "svm", "rforest", "nnet", "cboost")
+method <- c("lm", "rpart", "rforest", "cboost", "svm", "xgboost")
 # Limit training data
 #train <- train[train$seed == 500,]
 if ("lm" %in% method) {
-  model <- glm(formula, family=binomial(link='logit'), data=train)
-  test$lm_prediction <- as.factor(round(predict(model, test[,-(21)], type="response")))
+  lm_model <- glm(formula, family=binomial(link='logit'), data=train)
+  test$lm_prediction <- as.factor(round(predict(lm_model, test, type="response")))
+  performance = get_prediction_results(test$influential, test$lm_prediction, '1')
+  write.csv(performance, file=paste(root_dir, "lm_accuracy.txt", sep=''))
+  resultset <- get_test_data_results(test, "lm_prediction")
+  write.csv(resultset, file=paste(root_dir, "lm_comparison.csv", sep=''), row.names=FALSE, quote=TRUE)
+  # Check the number of instances where ML performed better than the rest in terms of accuracy
+  print(select(resultset, size:accuracy) %>% arrange(size, desc(accuracy)) %>% filter(size >= 30))
 }
 if ("rpart" %in% method) {
-  model <- rpart(formula, data=train)
-  test$rpart_prediction <- as.factor(round(predict(model, test[,-(21)])))
-}
-if ("svm" %in% method) {
-  model <- svm(formula, data=train)
-  test$svm_prediction <- as.factor(round(predict(model, newdata=test[,-(21)], probability = TRUE)))
+  rpart_model <- rpart(formula, data=train)
+  test$rpart_prediction <- as.factor(round(predict(rpart_model, test)))
+  performance = get_prediction_results(test$influential, test$rpart_prediction, '1')
+  write.csv(performance, file=paste(root_dir, "rpart_accuracy.txt", sep=''))
+  resultset <- get_test_data_results(test, "rpart_prediction")
+  write.csv(resultset, file=paste(root_dir, "rpart_comparison.csv", sep=''), row.names=FALSE, quote=TRUE)
+  # Check the number of instances where ML performed better than the rest in terms of accuracy
+  print(select(resultset, size:accuracy) %>% arrange(size, desc(accuracy)) %>% filter(size >= 30))
 }
 if ("rforest" %in% method) {
   cl <- makeCluster(cores)
   registerDoParallel(cores)
-  model <- foreach(ntree=rep(100, cores), .combine=combine, .multicombine=TRUE, .packages='randomForest') %dopar% {
+  rforest_model <- foreach(ntree=seq(10, cores), .combine=combine, .multicombine=TRUE, .packages='randomForest') %dopar% {
     randomForest(formula, data=train, ntree=ntree, mtry=3, na.action=na.exclude)
   }
   stopCluster(cl)
-#  model <- randomForest(formula, data=train, ntree=500, mtry=3, na.action=na.exclude)
-  test$rforest_prediction <- as.factor(round(predict(model, test[,-(21)])))
+  test$rforest_prediction <- as.factor(round(predict(rforest_model, test, type = "response")))
+  performance = get_prediction_results(test$influential, test$rforest_prediction, '1')
+  write.csv(performance, file=paste(root_dir, "rforest_accuracy.txt", sep=''))
+  resultset <- get_test_data_results(test, "rforest_prediction")
+  write.csv(resultset, file=paste(root_dir, "rforest_comparison.csv", sep=''), row.names=FALSE, quote=TRUE)
+  # Check the number of instances where ML performed better than the rest in terms of accuracy
+  print(select(resultset, size:accuracy) %>% arrange(size, desc(accuracy)) %>% filter(size >= 30))
 }
-if ("nnet" %in% method) {
-  cl <- makeCluster(cores)
-  registerDoParallel(cores)
-  model <- avNNet(formula, train, allowParallel=TRUE, size=100, MaxNWts=10000)
-  stopCluster(cl)
-  test$nnet_prediction <- as.factor(round(predict(model, test[,-(21)])))
+if ("svm" %in% method) {
+  svm_model <- svm(formula, data=train[1:100,], kernel="radial", probability=TRUE)
+  pred <- predict(svm_model, newdata=test, probability=TRUE)
+  names(pred) <- NULL
+  test$svm_prediction <- as.factor(round(pred))
+  performance = get_prediction_results(test$influential, test$svm_prediction, '1')
+  write.csv(performance, file=paste(root_dir, "svm_accuracy.txt", sep=''))
+  resultset <- get_test_data_results(test, "svm_prediction")
+  write.csv(resultset, file=paste(root_dir, "svm_comparison.csv", sep=''), row.names=FALSE, quote=TRUE)
+  # Check the number of instances where ML performed better than the rest in terms of accuracy
+  print(select(resultset, size:accuracy) %>% arrange(size, desc(accuracy)) %>% filter(size >= 30))
 }
 if ("cboost" %in% method) {
   train$influential <- as.factor(train$influential)
-  model <- C5.0(formula, train, trials=100, rules=TRUE, control=C5.0Control(earlyStopping=FALSE))
-  test$cboost_prediction <- as.factor(round(predict(model, test[,-(21)])))
+  cboost_model <- C5.0(formula, train, trials=100, rules=TRUE, control=C5.0Control(earlyStopping=FALSE))
+  test$cboost_prediction <- as.factor(predict(cboost_model, test))
+  performance = get_prediction_results(test$influential, test$cboost_prediction, '1')
+  write.csv(performance, file=paste(root_dir, "cboost_accuracy.txt", sep=''))
+  resultset <- get_test_data_results(test, "cboost_prediction")
+  write.csv(resultset, file=paste(root_dir, "cboost_comparison.csv", sep=''), row.names=FALSE, quote=TRUE)
+  # Check the number of instances where ML performed better than the rest in terms of accuracy
+  print(select(resultset, size:accuracy) %>% arrange(size, desc(accuracy)) %>% filter(size >= 30))
 }
+if ("xgboost" %in% method) {
+  # Ensure that the order of columns is same in both sets
+  train$influential <- train$influential
+  # Exclude non-numeric and label data
+  columns <- !(names(train) %in% c("graph_id", "seed", "influential"))
+  xgboost_model <- xgboost(formula=formula, data=as.matrix(train[, columns]), label=train$influential, max.depth=3, nthread=6, nrounds=500, objective= "binary:logistic")
+  # Keep only the feature names in the model, or else...
+  test$xgboost_prediction <- round(predict(xgboost_model, as.matrix(test[, xgboost_model$feature_names])))
+  performance = get_prediction_results(test$influential, test$xgboost_prediction, '1')
+  write.csv(performance, file=paste(root_dir, "xgboost_accuracy.txt", sep=''))
+  resultset <- get_test_data_results(test, "xgboost_prediction")
+  write.csv(resultset, file=paste(root_dir, "xgboost_comparison.csv", sep=''), row.names=FALSE, quote=TRUE)
+  # Check the number of instances where ML performed better than the rest in terms of accuracy
+  print(select(resultset, size:accuracy) %>% arrange(size, desc(accuracy)) %>% filter(size >= 30))
+}
+
 print(Sys.time() - start)
-get_prediction_results(test$influential, test$lm_prediction, '1')
-get_prediction_results(test$influential, test$rpart_prediction, '1')
 
 
-graph_size <- unique(test$graph_size[test$graph_size >= 30])
-# Empty data set to contain results
-resultset <- data.frame(size=c(), method=c(), accuracy=c(), pos_pred_value=c(), sensitivity=c(), specificity=c(), f1_score=c())
-# Machine learning model
-for (i in graph_size) {
-  actual <- as.factor(test$influential[test$graph_size == i])
-  results <- get_prediction_results(actual, as.factor(test$lm_prediction[test$graph_size == i]), '1')
-  row <- data.frame(size=i, method='ML', accuracy=results[[1]], pos_pred_value=results[[2]], sensitivity=results[[3]], specificity=results[[4]], f1_score=results[[5]])
-  resultset <- rbind(resultset, row)
-}
-# High degree
-for (i in graph_size) {
-  actual <- as.factor(test$influential[test$graph_size == i])
-  results <- get_prediction_results(actual, as.factor(test$inf_by_degree[test$graph_size == i]), '1')
-  row <- data.frame(size=i, method='Degree', accuracy=results[[1]], pos_pred_value=results[[2]], sensitivity=results[[3]], specificity=results[[4]], f1_score=results[[5]])
-  resultset <- rbind(resultset, row)
-}
-# High betweenness
-for (i in graph_size) {
-  actual <- as.factor(test$influential[test$graph_size == i])
-  results <- get_prediction_results(actual, as.factor(test$inf_by_betweenness[test$graph_size == i]), '1')
-  row <- data.frame(size=i, method='Betweenness', accuracy=results[[1]], pos_pred_value=results[[2]], sensitivity=results[[3]], specificity=results[[4]], f1_score=results[[5]])
-  resultset <- rbind(resultset, row)
-}
-# High closeness
-for (i in graph_size) {
-  actual <- as.factor(test$influential[test$graph_size == i])
-  results <- get_prediction_results(actual, as.factor(test$inf_by_closeness[test$graph_size == i]), '1')
-  row <- data.frame(size=i, method='Closeness', accuracy=results[[1]], pos_pred_value=results[[2]], sensitivity=results[[3]], specificity=results[[4]], f1_score=results[[5]])
-  resultset <- rbind(resultset, row)
-}
-# High Eigenvalue
-for (i in graph_size) {
-  actual <- as.factor(test$influential[test$graph_size == i])
-  results <- get_prediction_results(actual, as.factor(test$inf_by_eigenvalue[test$graph_size == i]), '1')
-  row <- data.frame(size=i, method='Eigenvector', accuracy=results[[1]], pos_pred_value=results[[2]], sensitivity=results[[3]], specificity=results[[4]], f1_score=results[[5]])
-  resultset <- rbind(resultset, row)
-}
-# High Pagerank
-for (i in graph_size) {
-  actual <- as.factor(test$influential[test$graph_size == i])
-  results <- get_prediction_results(actual, as.factor(test$inf_by_pagerank[test$graph_size == i]), '1')
-  row <- data.frame(size=i, method='Pagerank', accuracy=results[[1]], pos_pred_value=results[[2]], sensitivity=results[[3]], specificity=results[[4]], f1_score=results[[5]])
-  resultset <- rbind(resultset, row)
-}
-head(resultset)
 
 ##################################################################################
 # Analysis of results
 ##################################################################################
-# Check the number of instances where ML performed better than the rest in terms of accuracy
-dt <- select(resultset, size:accuracy) %>% arrange(size, desc(accuracy)) %>% filter(size >= 30)
-dt
 
-g <- generate_holme_kim(1000, 2, 0.05)
-graph <- get_graph_traits(g, TRUE)
-influential_size <- nrow(graph) * 0.1
-# Apply the model on this graph to classify influential nodes
-graph$prediction_prob <- predict(model, graph, type="response")
-graph$prediction <- as.numeric(graph$prediction_prob >= 0.5)
+## IMPORTANT: FIRST DEFINE WHICH MODEL IS TO BE ANALYZED
+model <- xgboost_model
 
-# Influential nodes by all traits
-size <- influential_size
-inf <- arrange(graph, desc(degree))[1:size, "node"]
-resilience(g, inf)
-inf <- arrange(graph, desc(betweenness))[1:size, "node"]
-resilience(g, V(g)[inf])
-inf <- arrange(graph, desc(closeness))[1:size, "node"]
-resilience(g, V(g)[inf])
-inf <- arrange(graph, desc(eigenvalue))[1:size, "node"]
-resilience(g, V(g)[inf])
-inf <- arrange(graph, desc(pagerank))[1:size, "node"]
-resilience(g, V(g)[inf])
-# Resilience by model. Pick top n by probability
-inf <- arrange(graph, desc(prediction_prob))[1:size, "node"]
-resilience(g, V(g)[inf])
+# Test on newly generated graphs
+sizes <- c(50, 100, 150, 200, 250, 300, 400, 500)
+resilience_results <- data.frame(type=c(), size=c(), by_model=c(), by_degree=c(), by_betweenness=c(), by_closeness=c(), by_eigenvalue=c(), by_pagerank=c(), by_eccentricity=c(), by_coreness=c(), by_ci=c())
+for (type in c('SF', 'SW', 'HK')) {
+  for (size in sizes) {
+    if (type == 'SF') {
+      graph <- generate_scale_free(size)
+    } else if (type == 'SW') {
+      graph <- generate_small_world(size, probability=1/sqrt(size))
+    } else if (type == 'HK') {
+      graph <- generate_holme_kim(size, 2, 1/sqrt(size))
+    }
+    traits_data <- get_graph_traits(graph, TRUE)
+    graph_data <- as.data.frame(traits_data)
+    influential_size <- ceiling(sqrt(size))
+    # Apply the model on this graph to classify influential nodes
+    pred <- attr(predict(svm_model, newdata=test[1:10,], probability=TRUE), "probabilities")[,1]
+    graph_data$prediction_prob <- pred
+    prob_cut <- min(head(sort(graph_data$prediction_prob, decreasing=TRUE), n=influential_size * 0.1))
+    graph_data$prediction <- as.numeric(graph_data$prediction_prob >= prob_cut)
+    
+    # Influential nodes by all traits
+    inf <- arrange(graph_data, desc(degree))[1:influential_size, "name"]
+    by_degree <- resilience(graph, V(graph)[inf])
+    inf <- arrange(graph_data, desc(betweenness))[1:influential_size, "name"]
+    by_betweenness <- resilience(graph, V(graph)[inf])
+    inf <- arrange(graph_data, desc(closeness))[1:influential_size, "name"]
+    by_closeness <- resilience(graph, V(graph)[inf])
+    inf <- arrange(graph_data, desc(eigenvalue))[1:influential_size, "name"]
+    by_eigenvalue <- resilience(graph, V(graph)[inf])
+    inf <- arrange(graph_data, desc(eccentricity))[1:influential_size, "name"]
+    by_eccentricity <- resilience(graph, V(graph)[inf])
+    inf <- arrange(graph_data, desc(coreness))[1:influential_size, "name"]
+    by_coreness <- resilience(graph, V(graph)[inf])
+    inf <- arrange(graph_data, desc(pagerank))[1:influential_size, "name"]
+    by_pagerank <- resilience(graph, V(graph)[inf])
+    inf <- arrange(graph_data, desc(ci))[1:influential_size, "name"]
+    by_ci <- resilience(graph, V(graph)[inf])
+    
+    # Resilience by model. Pick top n by probability
+    inf <- arrange(graph_data, desc(prediction_prob))[1:influential_size, "name"]
+    by_model <- resilience(graph, V(graph)[inf])
+    results <- data.frame(type=type, size=size, by_model=by_model, 
+      by_degree=by_degree, by_betweenness=by_betweenness, by_closeness=by_closeness, by_eigenvalue=by_eigenvalue, by_pagerank=by_pagerank,
+      by_eccentricity=by_eccentricity, by_coreness=by_coreness, by_ci=by_ci)
+    print(results)
+    resilience_results <- rbind(resilience_results, results)
+  }
+}
+write.csv(resilience_results, file=paste(root_dir, "resilience_results.csv", sep=''), row.names=FALSE, quote=TRUE)
 
-# Arrange by accuracy
 
-arrange(resultset, desc(accuracy))[1:size, "node"]
+###########################
+# Test on real-world graphs
+###########################
+author <- largest_component(read.graph("dataset/author_netscience.txt", directed=FALSE))
+ita2000 <- largest_component(read.graph("dataset/ita2000.txt", directed=FALSE))
+caida <- largest_component(read.graph("dataset/as-caida.txt", directed=FALSE))
+jdk <- largest_component(read.graph("dataset/jdk6_dependencies.txt", directed=FALSE))
+wordnet <- largest_component(read.graph("dataset/wordnet.txt", directed=FALSE))
+
+graphs <- list(author, ita2000, caida, jdk, wordnet)
+for(graph in graphs) {
+  print(fit_power_law(graph))
+}
+
+for(graph in graphs) {
+  print(fit_power_law(graph))
+  node_traits <- c("degree", "betweenness", "closeness", "eigenvalue", "eccentricity", "coreness", "pagerank", "ci", "a-degree", "a-betweenness", "a-closeness", "a-eigenvalue", "a-coreness", "a-pagerank", "a-ci")
+  graph_traits <- c("graph_size", "graph_edges", "graph_avg_degree", "graph_max_degree", "graph_apl", "graph_clust_coef", "graph_diameter", "graph_density", "graph_assortativity", "graph_avg_distance", "graph_triads", "graph_girth")
+  test <- get_graph_traits(graph=graph, node_traits=node_traits, graph_traits=graph_traits)
+  test$graph_id <- UUIDgenerate()
+  test <- as.data.frame(test)
+  head(test)
+  # Make predictions using model
+  test$prediction_prob <- predict(model, newdata=as.matrix(test[, model$feature_names]))
+  # Influential nodes by all traits
+  results <- NULL
+  size <- nrow(test) * 0.05
+  # By degree
+  inf <- arrange(test, desc(degree))[1:size, "name"]
+  results$degree <- resilience(graph, V(graph)[inf])
+  # By betweenness
+  inf <- arrange(test, desc(betweenness))[1:size, "name"]
+  results$betweenness <- resilience(graph, V(graph)[inf])
+  # By closeness
+  inf <- arrange(test, desc(closeness))[1:size, "name"]
+  results$closeness <- resilience(graph, V(graph)[inf])
+  # By Eigen-vector centrality
+  inf <- arrange(test, desc(eigenvalue))[1:size, "name"]
+  results$eigenvalue <- resilience(graph, V(graph)[inf])
+  # By pagerank
+  inf <- arrange(test, desc(pagerank))[1:size, "name"]
+  results$pagerank <- resilience(graph, V(graph)[inf])
+  # By eccentricity
+  inf <- arrange(test, desc(eccentricity))[1:size, "name"]
+  results$eccentricity <- resilience(graph, V(graph)[inf])
+  # By coreness
+  inf <- arrange(test, desc(coreness))[1:size, "name"]
+  results$coreness <- resilience(graph, V(graph)[inf])
+  # By collective influence
+  inf <- arrange(test, desc(ci))[1:size, "name"]
+  results$ci <- resilience(graph, V(graph)[inf])
+  
+  # Resilience by model. Pick top n by probability
+  inf <- arrange(test, desc(prediction_prob))[1:size, "name"]
+  results$model <- resilience(graph, V(graph)[inf])
+  print(unlist(results))
+}
 
 
 #### CONCLUSION:
 #' 1. The accuracy of the model surpasses the heuristics in all instances
 #' 2. ML model is also ahead in terms of predicting most resilient nodes as long as the structure of generated graph is similar to training graphs
-#' 3. The method drops its performance on graphs having different network properties than those in the training set
-#' 4. Closeness and Eigenvector traits are always outperformed by other traits
+#' 3. Closeness and Eigenvector traits are always outperformed by other traits
+#' 4. On real world scenarios, the ML model outperforms the others regardless of size and structure

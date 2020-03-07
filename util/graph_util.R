@@ -91,30 +91,39 @@ get_node_influence_traits <- function(graph, normalize=FALSE, traits=c("betweenn
   data$degree <- degree(graph)
   if ("betweenness" %in% traits) {
     data$betweenness <- betweenness(graph)
+    if (normalize) {
+      data$betweenness <- normalize_trait(data$betweenness)
+    }
   }
   if ("closeness" %in% traits) {
     data$closeness <- closeness(graph)
+    if (normalize) {
+      data$closeness <- normalize_trait(data$closeness)
+    }
   }
   if ("eigenvalue" %in% traits) {
     data$eigenvalue <- evcent(graph)$vector
+    if (normalize) {
+      data$eigenvalue <- normalize_trait(data$eigenvalue)
+    }
   }
   if ("eccentricity" %in% traits) {
     data$eccentricity <- eccentricity(graph)
+    if (normalize) {
+      data$eccentricity <- normalize_trait(data$eccentricity)
+    }
   }
   if ("coreness" %in% traits) {
     data$coreness <- coreness(graph)
   }
   if ("pagerank" %in% traits) {
     data$pagerank <- page_rank(graph)$vector
+    if (normalize) {
+      data$pagerank <- normalize_trait(data$pagerank)
+    }
   }
   if ("ci" %in% traits) {
     data$ci <- sapply(V(graph), function(x) { collective_influence(graph, neighborhood_distance=2, x) })
-  }
-  # Normalize existing traits so far, if required
-  if (normalize) {
-    for (trait in names(data)) {
-      data[,trait] <- normalize_trait(data[,trait])
-    }
   }
   # Adaptive ranks will not be normalized
   if ("a-degree" %in% traits) {
