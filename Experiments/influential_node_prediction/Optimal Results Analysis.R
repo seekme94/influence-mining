@@ -321,20 +321,19 @@ jdk <- largest_component(read.graph("dataset/jdk6_dependencies.txt", directed=FA
 wordnet <- largest_component(read.graph("dataset/wordnet.txt", directed=FALSE))
 
 graphs <- list(author, ita2000, caida, jdk, wordnet)
-for(graph in graphs) {
-  print(fit_power_law(graph))
-}
 
 for(graph in graphs) {
+  start <- Sys.time()
   print(fit_power_law(graph))
-  node_traits <- c("degree", "betweenness", "closeness", "eigenvalue", "eccentricity", "coreness", "pagerank", "ci", "a-degree", "a-betweenness", "a-closeness", "a-eigenvalue", "a-coreness", "a-pagerank", "a-ci")
+  node_traits <- c("degree", "betweenness", "closeness", "eigenvalue", "eccentricity", "coreness", "pagerank", "ci", "a-degree", "a-betweenness", "a-closeness", "a-eigenvalue", "a-coreness", "a-pagerank")
   graph_traits <- c("graph_size", "graph_edges", "graph_avg_degree", "graph_max_degree", "graph_apl", "graph_clust_coef", "graph_diameter", "graph_density", "graph_assortativity", "graph_avg_distance", "graph_triads", "graph_girth")
   test <- get_graph_traits(graph=graph, node_traits=node_traits, graph_traits=graph_traits)
-  test$graph_id <- UUIDgenerate()
+  print(Sys.time() - start)
   test <- as.data.frame(test)
-  head(test)
+  test$a_ci <- 0 # This is because we excluded adaptive CI due to expense
   # Make predictions using model
   test$prediction_prob <- predict(model, newdata=as.matrix(test[, model$feature_names]))
+  test$graph_id <- UUIDgenerate()
   # Influential nodes by all traits
   results <- NULL
   size <- nrow(test) * 0.05
