@@ -175,6 +175,7 @@ datasets <- c("karate_club.txt", "world_trade.txt", "nematode_neural_network.txt
 
 for (dataset in datasets) {
   graph <- largest_component(read.graph(paste("dataset/", dataset, sep=''), directed=FALSE, format="ncol"))
+  print(as.data.frame(graph_summary(graph)))
   size <- vcount(graph)
   prob <- 0.1
   if (size > 50) {
