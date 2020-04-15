@@ -255,7 +255,7 @@ influence_ic <- function(graph, seed, steps, prob) {
   # From G, k fraction of nodes are initially activated by some method. Next, we attempt to activate more nodes in the neighbourhood of these nodes.
   # Each active node attempts to activate each of its neighbour nodes with a global probability p (this is 0.5 for coin toss method)
   # Whether an attempt succeeds or fails, a node cannot be attempted for activation twice by any of the active neighbours.
-  
+
   # Save the start time
   start <- as.numeric(Sys.time())
   # Read graph from file
@@ -281,12 +281,12 @@ influence_ic <- function(graph, seed, steps, prob) {
         next
       }
       # Store all nodes in active that had successful trial
-      activated <- unlist(lapply(neighbours, function(neighbours) 
+      activated <- unlist(lapply(neighbours, function(neighbours)
         if (runif(1) >= (1 - prob)) {neighbours}))
       attempted <- unique(c(attempted, neighbours))
       active <- c(active, activated)
     }
-    seed <- active
+    seed <- c(seed, active)
     #print(c("Active in step", t, "=", length(active)))
     influence <- influence + length(active)
   }
@@ -311,7 +311,7 @@ influence_lt <- function(graph, seed, steps, threshold) {
   # A node v actiates only if sum of weights of its active neighbour nodes equals or exceeds its threshold (assigned randomly here).
   # In the given function, if the fraction of active nodes in neighbourhood equals or exceeds the threshold, the inactive node becomes active
   # The process continues for t steps, in each step, the nodes activated in step t-1 also take part in diffusion process
-  
+
   # Save the start time
   start <- as.numeric(Sys.time())
   # Read graph from file
@@ -443,7 +443,7 @@ simulate_ic <- function(graph, active) {
     neighbour_nodes <- neighbour_nodes[!neighbour_nodes$name %in% active]
     # Try to activate inactive neighbours according to the weight on edge
     for (neighbour in neighbour_nodes) {
-      weight <- E(graph, P=c(node, neighbour))$weight 
+      weight <- E(graph, P=c(node, neighbour))$weight
       if (runif(1) <= weight) {
         count <- count + 1
       }

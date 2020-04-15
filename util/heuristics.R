@@ -123,9 +123,9 @@ collective_influence <- function(g, neighborhood_distance, node_id, method=c("de
 #' Returns ranks from 1 to highest rank before the graph is discontinued, for nodes in given graph using adaptive variation of given method
 #' @name get_adaptive_ranking
 #' @param g the igraph object
-#' @param method the adaptive method to use. Allowed values are degree, closeness, betweenness, coreness, eigenvector, pagerank, collective_influence
+#' @param method the adaptive method to use. Allowed values are degree, closeness, betweenness, coreness, eigenvector, eccentricity, pagerank, collective_influence
 #' @return vector of ranks
-get_adaptive_ranking <- function(g, method=c("degree", "closeness", "betweenness", "coreness", "eigenvector", "pagerank", "collective_influence")) {
+get_adaptive_ranking <- function(g, method=c("degree", "closeness", "betweenness", "coreness", "eigenvector", "eccentricity", "pagerank", "collective_influence")) {
   V(g)$name <- V(g)
   V(g)$rank <- -1
   current_rank <- 1
@@ -143,6 +143,8 @@ get_adaptive_ranking <- function(g, method=c("degree", "closeness", "betweenness
       param <- graph.coreness(graph, mode="all")
     } else if (method == "a-eigenvector") {
       param <- evcent(graph, directed=FALSE)$vector
+    } else if (method == "a-eccentricity") {
+      param <- eccentricity(graph)
     } else if (method == "pagerank") {
       param <- page_rank(graph, directed=TRUE)$vector
     } else if (method == "collective_influence") {
