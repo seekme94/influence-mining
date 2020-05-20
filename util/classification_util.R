@@ -1,3 +1,5 @@
+library(caret)
+
 # Get Accuracy/Precision/Recall/F1-Score table
 get_prediction_results <- function(x, y, positive) {
   x <- as.factor(x)

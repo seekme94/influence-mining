@@ -1,7 +1,7 @@
 #' This script is for analysis of the results from Optimal node ML model experiment.
 #' The Experiemnts/optimal directory contains the graphs with network traits, one file per graph.
 #' The results are stored in results.json, which contain the set of influential nodes and their resilience
-#' 
+#'
 #' This file reads all the data, learns a ML model and tests the efficiency on test data
 
 # Load required libraries
@@ -36,8 +36,13 @@ cores <- 6
 for (i in 1:nrow(results)) {
   # Graph ID
   graph_id <- paste(root_dir, "data/graph_", results[i, "size"], "_", results[i, "uuid"], sep='')
+  filename <- paste(graph_id, ".csv", sep='')
+  if (file.exists(filename) == FALSE) {
+    print(paste(filename, "does not exist or is unreadable!"))
+    next
+  }
   # Read the respective graph data
-  graph <- read.csv(paste(graph_id, ".csv", sep=''))
+  graph <- read.csv(filename)
   # Add a graph ID column
   graph$graph_id <- graph_id
   # Add a seed column
@@ -52,14 +57,21 @@ for (i in 1:nrow(results)) {
 }
 
 # View a brief summary of data
+length(unique(data$graph_id))
 summary(data)
 
 # Normalize data
 data <- normalize_data(data, columns=c("degree", "betweenness", "closeness", "eigenvalue", "eccentricity", "coreness", "pagerank", "ci", "a_degree", "a_betweenness", "a_closeness", "a_eigenvalue", "a_coreness", "a_pagerank", "a_ci"))
 
+# Prediction formula considering both node and graph traits
+formula <- influential ~ degree + closeness + betweenness + eigenvalue + eccentricity + coreness + pagerank + ci + graph_clust_coef + graph_density + graph_assortativity
+node_traits <- c("degree", "betweenness", "closeness", "eigenvalue", "eccentricity", "coreness", "pagerank", "ci")
+graph_traits <- c("graph_size", "graph_edges", "graph_avg_degree", "graph_max_degree", "graph_apl", "graph_clust_coef", "graph_diameter", "graph_density", "graph_assortativity", "graph_avg_distance", "graph_triads", "graph_girth")
+columns <- c("name", "graph_id", "seed", "influential", node_traits, graph_traits)
+
 # Split into 50/50 training and test sets
-train <- data[data$seed <= 5,]
-test <- data[data$seed > 5,]
+train <- data[data$seed <= 5, columns]
+test <- data[data$seed > 5, columns]
 
 # Influence by network traits
 newtest <- NULL
@@ -159,9 +171,6 @@ get_test_data_results <- function(test, prediction_column) {
 }
 
 
-# Prediction phase
-# Formula considering both node and graph traits
-formula <- influential ~ degree + closeness + betweenness + eigenvalue + eccentricity + coreness + pagerank + ci + graph_clust_coef + graph_density + graph_assortativity
 
 ## Learn prediction model
 # lm = Linear (logistic regression) model
@@ -171,7 +180,7 @@ formula <- influential ~ degree + closeness + betweenness + eigenvalue + eccentr
 # nnet = Neural network
 # ccboost = C50 boosting
 start <- Sys.time()
-method <- c("lm", "rpart", "rforest", "cboost", "svm", "xgboost")
+method <- c("xgboost")
 # Limit training data
 #train <- train[train$seed == 500,]
 if ("lm" %in% method) {
@@ -237,7 +246,7 @@ if ("xgboost" %in% method) {
   train$influential <- train$influential
   # Exclude non-numeric and label data
   columns <- !(names(train) %in% c("graph_id", "seed", "influential"))
-  xgboost_model <- xgboost(formula=formula, data=as.matrix(train[, columns]), label=train$influential, max.depth=3, nthread=6, nrounds=500, objective= "binary:logistic")
+  xgboost_model <- xgboost(formula=formula, data=as.matrix(train[, columns]), label=train$influential, max.depth=7, nthread=cores, nrounds=1000, objective="binary:logistic")
   # Keep only the feature names in the model, or else...
   test$xgboost_prediction <- round(predict(xgboost_model, as.matrix(test[, xgboost_model$feature_names])))
   performance = get_prediction_results(test$influential, test$xgboost_prediction, '1')
@@ -247,7 +256,6 @@ if ("xgboost" %in% method) {
   # Check the number of instances where ML performed better than the rest in terms of accuracy
   print(select(resultset, size:accuracy) %>% arrange(size, desc(accuracy)) %>% filter(size >= 30))
 }
-
 print(Sys.time() - start)
 
 
@@ -259,76 +267,28 @@ print(Sys.time() - start)
 ## IMPORTANT: FIRST DEFINE WHICH MODEL IS TO BE ANALYZED
 model <- xgboost_model
 
-# Test on newly generated graphs
-sizes <- c(50, 100, 150, 200, 250, 300, 400, 500)
-resilience_results <- data.frame(type=c(), size=c(), by_model=c(), by_degree=c(), by_betweenness=c(), by_closeness=c(), by_eigenvalue=c(), by_pagerank=c(), by_eccentricity=c(), by_coreness=c(), by_ci=c())
-for (type in c('SF', 'SW', 'HK')) {
-  for (size in sizes) {
-    if (type == 'SF') {
-      graph <- generate_scale_free(size)
-    } else if (type == 'SW') {
-      graph <- generate_small_world(size, probability=1/sqrt(size))
-    } else if (type == 'HK') {
-      graph <- generate_holme_kim(size, 2, 1/sqrt(size))
-    }
-    traits_data <- get_graph_traits(graph, TRUE)
-    graph_data <- as.data.frame(traits_data)
-    influential_size <- ceiling(sqrt(size))
-    # Apply the model on this graph to classify influential nodes
-    pred <- attr(predict(svm_model, newdata=test[1:10,], probability=TRUE), "probabilities")[,1]
-    graph_data$prediction_prob <- pred
-    prob_cut <- min(head(sort(graph_data$prediction_prob, decreasing=TRUE), n=influential_size * 0.1))
-    graph_data$prediction <- as.numeric(graph_data$prediction_prob >= prob_cut)
-    
-    # Influential nodes by all traits
-    inf <- arrange(graph_data, desc(degree))[1:influential_size, "name"]
-    by_degree <- resilience(graph, V(graph)[inf])
-    inf <- arrange(graph_data, desc(betweenness))[1:influential_size, "name"]
-    by_betweenness <- resilience(graph, V(graph)[inf])
-    inf <- arrange(graph_data, desc(closeness))[1:influential_size, "name"]
-    by_closeness <- resilience(graph, V(graph)[inf])
-    inf <- arrange(graph_data, desc(eigenvalue))[1:influential_size, "name"]
-    by_eigenvalue <- resilience(graph, V(graph)[inf])
-    inf <- arrange(graph_data, desc(eccentricity))[1:influential_size, "name"]
-    by_eccentricity <- resilience(graph, V(graph)[inf])
-    inf <- arrange(graph_data, desc(coreness))[1:influential_size, "name"]
-    by_coreness <- resilience(graph, V(graph)[inf])
-    inf <- arrange(graph_data, desc(pagerank))[1:influential_size, "name"]
-    by_pagerank <- resilience(graph, V(graph)[inf])
-    inf <- arrange(graph_data, desc(ci))[1:influential_size, "name"]
-    by_ci <- resilience(graph, V(graph)[inf])
-    
-    # Resilience by model. Pick top n by probability
-    inf <- arrange(graph_data, desc(prediction_prob))[1:influential_size, "name"]
-    by_model <- resilience(graph, V(graph)[inf])
-    results <- data.frame(type=type, size=size, by_model=by_model, 
-      by_degree=by_degree, by_betweenness=by_betweenness, by_closeness=by_closeness, by_eigenvalue=by_eigenvalue, by_pagerank=by_pagerank,
-      by_eccentricity=by_eccentricity, by_coreness=by_coreness, by_ci=by_ci)
-    print(results)
-    resilience_results <- rbind(resilience_results, results)
-  }
-}
-write.csv(resilience_results, file=paste(root_dir, "resilience_results.csv", sep=''), row.names=FALSE, quote=TRUE)
-
-
-###########################
-# Test on real-world graphs
-###########################
+################
+# Test on graphs
+################
 author <- largest_component(read.graph("dataset/author_netscience.txt", directed=FALSE))
 ita2000 <- largest_component(read.graph("dataset/ita2000.txt", directed=FALSE))
-caida <- largest_component(read.graph("dataset/as-caida.txt", directed=FALSE))
+#caida <- largest_component(read.graph("dataset/as-caida.txt", directed=FALSE))
 jdk <- largest_component(read.graph("dataset/jdk6_dependencies.txt", directed=FALSE))
-wordnet <- largest_component(read.graph("dataset/wordnet.txt", directed=FALSE))
+citynet2010 <- largest_component(read.graph("dataset/citycity_undirected_2010.csv", directed=FALSE, format="ncol"))
+citynet2013 <- largest_component(read.graph("dataset/citycity_undirected_2013.csv", directed=FALSE, format="ncol"))
+contact <- largest_component(read.graph("dataset/human_contact.txt", directed=FALSE))
 
-graphs <- list(author, ita2000, caida, jdk, wordnet)
+graphs <- list(author, contact, ita2000, citynet2010, citynet2013, jdk)
 
 for(graph in graphs) {
   start <- Sys.time()
-  print(fit_power_law(graph))
-  node_traits <- c("degree", "betweenness", "closeness", "eigenvalue", "eccentricity", "coreness", "pagerank", "ci", "a-degree", "a-betweenness", "a-closeness", "a-eigenvalue", "a-coreness", "a-pagerank")
+  # print(fit_power_law(graph))
+
+  node_traits <- c("degree", "betweenness", "closeness", "eigenvalue", "eccentricity", "coreness", "pagerank", "ci")
   graph_traits <- c("graph_size", "graph_edges", "graph_avg_degree", "graph_max_degree", "graph_apl", "graph_clust_coef", "graph_diameter", "graph_density", "graph_assortativity", "graph_avg_distance", "graph_triads", "graph_girth")
-  test <- get_graph_traits(graph=graph, node_traits=node_traits, graph_traits=graph_traits)
+  test <- get_graph_traits(graph=graph, node_traits=node_traits, graph_traits=graph_traits, verbose=FALSE)
   print(Sys.time() - start)
+
   test <- as.data.frame(test)
   test$a_ci <- 0 # This is because we excluded adaptive CI due to expense
   # Make predictions using model
@@ -337,6 +297,8 @@ for(graph in graphs) {
   # Influential nodes by all traits
   results <- NULL
   size <- nrow(test) * 0.05
+  # Random nodes
+  results$random <- resilience(graph, sample(V(graph), size))
   # By degree
   inf <- arrange(test, desc(degree))[1:size, "name"]
   results$degree <- resilience(graph, V(graph)[inf])
@@ -346,7 +308,7 @@ for(graph in graphs) {
   # By closeness
   inf <- arrange(test, desc(closeness))[1:size, "name"]
   results$closeness <- resilience(graph, V(graph)[inf])
-  # By Eigen-vector centrality
+  # By Eigenvector centrality
   inf <- arrange(test, desc(eigenvalue))[1:size, "name"]
   results$eigenvalue <- resilience(graph, V(graph)[inf])
   # By pagerank
@@ -361,12 +323,90 @@ for(graph in graphs) {
   # By collective influence
   inf <- arrange(test, desc(ci))[1:size, "name"]
   results$ci <- resilience(graph, V(graph)[inf])
-  
+
   # Resilience by model. Pick top n by probability
   inf <- arrange(test, desc(prediction_prob))[1:size, "name"]
   results$model <- resilience(graph, V(graph)[inf])
   print(unlist(results))
 }
+
+####################
+# For large networks
+####################
+# graph <- wordnet
+#
+# start <- Sys.time()
+# print(fit_power_law(graph))
+# test <- NULL
+# test$name <- 1:vcount(graph) - 1
+# print("Degree...")
+# test$degree <- degree(graph)
+# print("Betweenness...")
+# test$betweenness <- betweenness(graph)
+# print("Closeness...")
+# test$closeness <- closeness(graph)
+# print("Eigenvector...")
+# test$eigenvalue <- normalize_trait(evcent(graph)$vector)
+# print("Eccentricity...")
+# test$eccentricity <- normalize_trait(eccentricity(graph))
+# print("Coreness...")
+# test$coreness <- coreness(graph)
+# print("Pagerank...")
+# test$pagerank <- normalize_trait(page_rank(graph)$vector)
+# print("CI...")
+# test$ci <- sapply(V(graph), function(x) { collective_influence(graph, neighborhood_distance=2, x) })
+# test$graph_size <- vcount(graph)
+# test$graph_edges <- ecount(graph)
+# test$graph_avg_degree <- mean(test$degree)
+# test$graph_max_degree <- max(test$degree)
+# print("APL...")
+# test$graph_apl <- average.path.length(graph)
+# print("CC...")
+# test$graph_clust_coef <- transitivity(graph)
+# print("Diameter...")
+# test$graph_diameter <- diameter(graph)
+# print("Density...")
+# test$graph_density <- graph.density(graph)
+# print("Assortativity...")
+# test$graph_assortativity <- assortativity.degree(graph)
+# print("Avg Distance...")
+# test$graph_avg_distance <- mean_distance(graph)
+# print("Triads...")
+# test$graph_triads <- length(triangles(graph))
+# print("Girth...")
+# test$graph_girth <- girth(graph)$girth
+# # Preserve current state
+# write.csv2(test, paste(root_dir, "test_wordnet.dat", sep=''), sep=";", row.names=FALSE)
+#
+# print(Sys.time() - start)
+#
+# test <- as.data.frame(test)
+# # test$a_degree <- test$a_betweenness <- test$a_closeness <- test$a_eigenvalue <- test$a_eccentricity <- test$a_coreness <- test$a_pagerank <- test$a_ci <- 0
+# test$prediction_prob <- predict(model, newdata=as.matrix(test[, model$feature_names]))
+# test$graph_id <- UUIDgenerate()
+# results <- NULL
+# size <- nrow(test) * 0.05
+# results$random <- resilience(graph, sample(V(graph), size))
+# inf <- arrange(test, desc(degree))[1:size, "name"]
+# results$degree <- resilience(graph, V(graph)[inf])
+# inf <- arrange(test, desc(betweenness))[1:size, "name"]
+# results$betweenness <- resilience(graph, V(graph)[inf])
+# inf <- arrange(test, desc(closeness))[1:size, "name"]
+# results$closeness <- resilience(graph, V(graph)[inf])
+# inf <- arrange(test, desc(eigenvalue))[1:size, "name"]
+# results$eigenvalue <- resilience(graph, V(graph)[inf])
+# inf <- arrange(test, desc(pagerank))[1:size, "name"]
+# results$pagerank <- resilience(graph, V(graph)[inf])
+# inf <- arrange(test, desc(eccentricity))[1:size, "name"]
+# results$eccentricity <- resilience(graph, V(graph)[inf])
+# inf <- arrange(test, desc(coreness))[1:size, "name"]
+# results$coreness <- resilience(graph, V(graph)[inf])
+# inf <- arrange(test, desc(ci))[1:size, "name"]
+# results$ci <- resilience(graph, V(graph)[inf])
+# # Resilience by model. Pick top n by probability
+# inf <- arrange(test, desc(prediction_prob))[1:size, "name"]
+# results$model <- resilience(graph, V(graph)[inf])
+# print(unlist(results))
 
 
 #### CONCLUSION:
