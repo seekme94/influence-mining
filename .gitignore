@@ -6,3 +6,4 @@ python/__pycache__/
 python/.pytest_cache/
 python/.vscode/
 python/.idea/
+.idea/

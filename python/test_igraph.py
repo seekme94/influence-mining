@@ -4,10 +4,10 @@ import numpy as np
 import graph_util as gu
 
 
-class TestSum(unittest.TestCase):
+class TestIgraph(unittest.TestCase):
 
     def test_normalize(self):
-        normal = gu.normalize([1,1,2,3])
+        normal = gu.normalize([1, 1, 2, 3])
         normal
 
     def test_create_graph(self):
@@ -15,7 +15,7 @@ class TestSum(unittest.TestCase):
         self.assertTrue(isinstance(g, Graph))
 
     def test_create_edgelist_graph(self):
-        g = gu.create_edgelist_graph("sample_edgelist.txt", directed = False, weights = False)
+        g = gu.create_edgelist_graph("sample_edgelist.txt", directed=False, weights=False)
         self.assertTrue(isinstance(g, Graph))
 
     def test_get_graph_traits_degree(self):
@@ -29,7 +29,7 @@ class TestSum(unittest.TestCase):
         m = list(np.random.poisson(degree_mean, n))
         g = Graph.Barabasi(n, m, outpref=True, directed=False, start_from=None)
         result = gu.get_graph_traits(g, traits=[gu.Trait.BETWEENNESS], normalize=False)
-        self.assertEquals(len(result["betweenness"]), n)
+        self.assertEqual(len(result["betweenness"]), n)
 
     def test_get_graph_traits_eigenvalue(self):
         n = 50
@@ -37,7 +37,7 @@ class TestSum(unittest.TestCase):
         m = list(np.random.poisson(degree_mean, n))
         g = Graph.Barabasi(n, m, outpref=True, directed=False, start_from=None)
         result = gu.get_graph_traits(g, traits=[gu.Trait.EIGENVALUE], normalize=False)
-        self.assertEquals(len(result["eigenvalue"]), n)
+        self.assertEqual(len(result["eigenvalue"]), n)
 
     def test_get_graph_traits_pagerank(self):
         n = 50
@@ -52,6 +52,7 @@ class TestSum(unittest.TestCase):
         alpha = gu.fit_power_law(g, plot=False)
         self.assertGreater(alpha, 1)
         self.assertLess(alpha, 2)
+
 
 if __name__ == '__main__':
     unittest.main()

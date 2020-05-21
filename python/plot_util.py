@@ -8,15 +8,15 @@ Created on Sat Oct 19 20:42:46 2019
 
 import matplotlib.pyplot as plt
 import networkx as nx
+import graph_util as gu
 from operator import itemgetter
 from networkx.drawing.nx_agraph import graphviz_layout # requries pydot
-from graph_util import convert_igraph_to_networkx
 from igraph import Graph
 
 
 def plot(G, node_color="blue", node_size=50, line_color="grey", line_widths=0, width=0.1, save_to_file=False, file_name="graph.png"):
     if (isinstance(G, Graph)):
-        G = convert_igraph_to_networkx(G)
+        G = gu.convert_igraph_to_networkx(G)
     options = {'node_color': node_color, 'node_size': node_size, 'line_color': line_color,
                'linewidths': line_widths, 'width': width}
     nx.draw(G, **options)
@@ -27,7 +27,7 @@ def plot(G, node_color="blue", node_size=50, line_color="grey", line_widths=0, w
 
 def plot_circular(G, node_color="blue", node_size=50, line_color="grey", line_widths=0, width=0.1, save_to_file=False, file_name="graph.png"):
     if (isinstance(G, Graph)):
-        G = convert_igraph_to_networkx(G)
+        G = gu.convert_igraph_to_networkx(G)
     options = {'node_color': node_color, 'node_size': node_size, 'line_color': line_color,
                'linewidths': line_widths, 'width': width}
     nx.draw_circular(G, **options)
@@ -39,7 +39,7 @@ def plot_circular(G, node_color="blue", node_size=50, line_color="grey", line_wi
 def plot_edge_colormap(G, save_to_file=False, file_name="graph.png"):
     # best for star graphs, e.g. nx.star_graph(20)
     if (isinstance(G, Graph)):
-        G = convert_igraph_to_networkx(G)
+        G = gu.convert_igraph_to_networkx(G)
     colors = range(int(pow(len(G), 1/2))) # Sqrt of the size of graph
     pos = nx.spring_layout(G)
     nx.draw(G, pos, node_color='#A0CBE2', edge_color=colors, width=4, edge_cmap=plt.cm.Blues, with_labels=False)
@@ -51,7 +51,7 @@ def plot_edge_colormap(G, save_to_file=False, file_name="graph.png"):
 def plot_circular_tree(G, save_to_file=False, file_name="graph.png"):
     # best for tree graphs, e.g. nx.balanced_tree(2, 7)
     if (isinstance(G, Graph)):
-        G = convert_igraph_to_networkx(G)
+        G = gu.convert_igraph_to_networkx(G)
     pos = graphviz_layout(G, prog='twopi', args='')
     plt.figure(figsize=(8, 8))
     nx.draw(G, pos, node_size=20, alpha=0.5, node_color="blue", with_labels=False)
@@ -64,7 +64,7 @@ def plot_circular_tree(G, save_to_file=False, file_name="graph.png"):
 def plot_degree_rank(G, save_to_file=False, file_name="graph.png"):
     # best for random graphs, e.g. nx.gnp_random_graph(100, 0.02)
     if (isinstance(G, Graph)):
-        G = convert_igraph_to_networkx(G)
+        G = gu.convert_igraph_to_networkx(G)
     degree_sequence = sorted([d for n, d in G.degree()], reverse=True)
     plt.loglog(degree_sequence, 'b-', marker='o')
     plt.title("Degree rank plot")
@@ -81,7 +81,7 @@ def plot_degree_rank(G, save_to_file=False, file_name="graph.png"):
 def plot_ego_net(G, save_to_file=False, file_name="graph.png"):
     # best for graphs with hubs, e.g. nx.generators.barabasi_albert_graph(100, 3)
     if (isinstance(G, Graph)):
-        G = convert_igraph_to_networkx(G)
+        G = gu.convert_igraph_to_networkx(G)
     node_and_degree = G.degree()
     (largest_hub, degree) = sorted(node_and_degree, key=itemgetter(1))[-1]
     hub_ego = nx.ego_graph(G, largest_hub)
@@ -96,7 +96,7 @@ def plot_ego_net(G, save_to_file=False, file_name="graph.png"):
 def plot_random(G, save_to_file=False, file_name="graph.png"):
     # best for general random graps, e.g. G = nx.random_geometric_graph(200, 0.15)
     if (isinstance(G, Graph)):
-        G = convert_igraph_to_networkx(G)
+        G = gu.convert_igraph_to_networkx(G)
     pos = nx.get_node_attributes(G, 'pos')
     dmin = 1
     ncenter = 0
@@ -121,7 +121,7 @@ def plot_random(G, save_to_file=False, file_name="graph.png"):
 def plot_weighted(G, save_to_file=False, file_name="graph.png"):
     # Weights should be normalized between 0 and 1
     if (isinstance(G, Graph)):
-        G = convert_igraph_to_networkx(G)
+        G = gu.convert_igraph_to_networkx(G)
     elarge = [(u, v) for (u, v, d) in G.edges(data=True) if d['weight'] > 0.5]
     esmall = [(u, v) for (u, v, d) in G.edges(data=True) if d['weight'] <= 0.5]
     pos = nx.spring_layout(G)  # positions for all nodes
@@ -145,7 +145,7 @@ def plot_community_layout(G, save_to_file=False, file_name="graph.png"):
     for i in range(G.vcount()):
         partitions[G.vs["name"][i]] = G.vs["group"][i]
     if (isinstance(G, Graph)):
-        G = convert_igraph_to_networkx(G)
+        G = gu.convert_igraph_to_networkx(G)
     node_positions = dict()
     communities = dict()
     for node, community in partitions.items():
@@ -199,7 +199,6 @@ if __name__ == '__main__':
     plot_ego_net(nx.generators.barabasi_albert_graph(100, 5))
     plot_random(nx.random_geometric_graph(200, 0.15))
 
-
     G = nx.Graph()
     set1 = ['a', 'a', 'c', 'c', 'c', 'a']
     set2 = ['b', 'c', 'd', 'e', 'f', 'd']
@@ -207,4 +206,3 @@ if __name__ == '__main__':
     for i in range(0, 6):
         G.add_edge(set1[i], set2[i], weight=weights[i])
     plot_weighted(G)
-
