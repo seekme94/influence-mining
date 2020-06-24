@@ -1,8 +1,11 @@
 #' This functions gives a summary of common metrics of given graph
+#' 
 #' @name graph_summary
 #' @param graph is the igraph object
-#' @param plot uses tkplot to plot the graph. Default is FALSE
+#' @param plot uses tkplot to plot the \code{graph}. Default is FALSE
 #' @return object containing summary
+#' @examples
+#' graph_summary(graph)
 graph_summary <- function(graph, plot=FALSE) {
   o <- NULL
   degrees <- degree(graph)
@@ -29,6 +32,7 @@ graph_summary <- function(graph, plot=FALSE) {
 }
 
 #' Calculates several traits from given graph and returns as data frame
+#' 
 #' @name get_graph_traits
 #' @param graph is the igraph object
 #' @param normalize uses pnorm function to normalize the traits. Default is FALSE
@@ -108,6 +112,7 @@ get_graph_traits <- function(graph, normalize=FALSE,
 }
 
 #' Calculates several node influence traits from given graph and returns as a list
+#' 
 #' @name get_node_influence_traits
 #' @param graph is the igraph object
 #' @param normalize uses pnorm function to normalize the traits. Default is FALSE
@@ -227,14 +232,21 @@ get_node_influence_traits <- function(graph, normalize=FALSE, traits=c("betweenn
   data
 }
 
+#' This function normalizes the numeric values passed in \code{x} between 0 and 1
+#' 
+#' @name normalize_trait
+#' @param x is data to be normalized
+#' @return normalized \code{x}
 normalize_trait <- function(x) {
   pnorm(x, mean(x), sd(x))
 }
 
 #' This function can be used to normalize a set of numeric variables in a dataset between 0 and 1. Non-numeric data will be skipped
+#' 
 #' @name normalize_data
 #' @param data is data frame to be normalized
 #' @param columns is list of columns to be normalized
+#' @return normalized data frame
 normalize_data <- function(data, columns) {
   for (column in columns) {
     # Skip non-numeric data
@@ -249,6 +261,7 @@ normalize_data <- function(data, columns) {
 }
 
 #' This function plots degree distribution of given graph
+#' 
 #' @name plot_degree_distribution
 #' @param graph is the igraph object
 plot_degree_distribution <- function(graph) {
@@ -265,6 +278,7 @@ plot_degree_distribution <- function(graph) {
 }
 
 #' This function plots degree distribution and returns power-law exponent of given graph
+#' 
 #' @name fit_power_law
 #' @param graph is the igraph object
 fit_power_law = function(graph) {
@@ -282,6 +296,7 @@ fit_power_law = function(graph) {
 }
 
 #' This function generates a tree-structured graph
+#' 
 #' @name generate_tree
 #' @param size is the number of nodes
 #' @param children is the number of children each node has (in addition to a parent node)
@@ -293,6 +308,7 @@ generate_tree <- function(size, children=2, direction='undirected') {
 }
 
 #' This function generates a ring-structured graph, in which nodes are connected with neighbours within given distance
+#' 
 #' @name generate_ring
 #' @param size is the number of nodes
 #' @param distance defines maximum distance each node has to its farthest direct neighbour
@@ -303,6 +319,7 @@ generate_ring <- function(size, distance) {
 }
 
 #' This function generates a fully connected undirected graph
+#' 
 #' @name generate_clique
 #' @param size is the number of nodes
 #' @return igraph object
@@ -312,6 +329,7 @@ generate_clique <- function(size) {
 }
 
 #' This function generates a Erdos Renyi random graph
+#' 
 #' @name generate_random
 #' @param size is the number of nodes
 #' @param probability is the probability of edge formation between nodes
@@ -324,6 +342,7 @@ generate_random <- function(size, probability=0.2, directed=FALSE, allow_cycles=
 }
 
 #' This function generates a Watts & Strogatz small-world graph by rewiring a random graph, while keeping the degree distribution consistent
+#' 
 #' @name generate_small_world
 #' @param size is the number of nodes
 #' @param probability is the probability of edge formation between nodes
@@ -338,6 +357,7 @@ generate_small_world <- function(size, probability=0.1, directed=FALSE, allow_cy
 }
 
 #' This function generates a Barabasi scale-free graph
+#' 
 #' @name generate_scale_free
 #' @param size is the number of nodes
 #' @param preference is the power of preferencial attachment. Default is linear, i.e. 1
@@ -350,7 +370,7 @@ generate_scale_free <- function(size, preference=1, directed=FALSE, allow_cycles
 }
 
 #' Holme-Kim Network
-#'
+#' 
 #' @description Simulate a scale-free network with relatively high clustering, comparing to B-A networks (Holme and Kim, 1999).
 #' @param size is the number of nodes of the network
 #' @param m is the number of nodes to which a new node connects at each iteration
@@ -404,6 +424,7 @@ net.holme.kim <- function( n, m, pt ){
 }
 
 #' This function returns largest connected component in a network
+#' 
 #' @name largest_component
 #' @param graph is the igraph object
 #' @return largest component igraph object

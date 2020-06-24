@@ -1,11 +1,8 @@
-# Project: influence-mining
-### Version: 0.1.2
+# Project: influence.mining
+### Version: 0.2.0
 
-The purpose of this project is to provide an interface to perform influence mining operations on networks, preferably Social networks.
+This project provides various functions to perform influence mining operations on graphs.
 
-The source contains the following files:
-  1. Influence.R
-  2. Under construction
 
 ```
 Influence.R
