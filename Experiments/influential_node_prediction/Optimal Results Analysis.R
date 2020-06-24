@@ -246,7 +246,7 @@ if ("xgboost" %in% method) {
   train$influential <- train$influential
   # Exclude non-numeric and label data
   columns <- !(names(train) %in% c("graph_id", "seed", "influential"))
-  xgboost_model <- xgboost(formula=formula, data=as.matrix(train[, columns]), label=train$influential, max.depth=7, nthread=cores, nrounds=1000, objective="binary:logistic")
+  xgboost_model <- xgboost(formula=formula, data=as.matrix(train[, columns]), label=train$influential, max.depth=7, nthread=cores, nrounds=500, objective="binary:logistic")
   # Keep only the feature names in the model, or else...
   test$xgboost_prediction <- round(predict(xgboost_model, as.matrix(test[, xgboost_model$feature_names])))
   performance = get_prediction_results(test$influential, test$xgboost_prediction, '1')
@@ -270,15 +270,17 @@ model <- xgboost_model
 ################
 # Test on graphs
 ################
-author <- largest_component(read.graph("dataset/author_netscience.txt", directed=FALSE))
-ita2000 <- largest_component(read.graph("dataset/ita2000.txt", directed=FALSE))
+# author <- largest_component(read.graph("dataset/author_netscience.txt", directed=FALSE))
+# ita2000 <- largest_component(read.graph("dataset/ita2000.txt", directed=FALSE))
 #caida <- largest_component(read.graph("dataset/as-caida.txt", directed=FALSE))
-jdk <- largest_component(read.graph("dataset/jdk6_dependencies.txt", directed=FALSE))
-citynet2010 <- largest_component(read.graph("dataset/citycity_undirected_2010.csv", directed=FALSE, format="ncol"))
-citynet2013 <- largest_component(read.graph("dataset/citycity_undirected_2013.csv", directed=FALSE, format="ncol"))
-contact <- largest_component(read.graph("dataset/human_contact.txt", directed=FALSE))
+# jdk <- largest_component(read.graph("dataset/jdk6_dependencies.txt", directed=FALSE))
+# contact <- largest_component(read.graph("dataset/human_contact.txt", directed=FALSE))
+citynet2010 <- largest_component(read.graph("dataset/citycity_weighted_2010.csv", directed=FALSE, format="ncol"))
+citynet2013 <- largest_component(read.graph("dataset/citycity_weighted_2013.csv", directed=FALSE, format="ncol"))
+citynet2016 <- largest_component(read.graph("dataset/citycity_weighted_2016.csv", directed=FALSE, format="ncol"))
+citynet2019 <- largest_component(read.graph("dataset/citycity_weighted_2019.csv", directed=FALSE, format="ncol"))
 
-graphs <- list(author, contact, ita2000, citynet2010, citynet2013, jdk)
+graphs <- list(citynet2010, citynet2013, citynet2016, citynet2019)
 
 for(graph in graphs) {
   start <- Sys.time()

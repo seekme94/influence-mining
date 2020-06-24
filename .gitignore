@@ -7,3 +7,4 @@ python/.pytest_cache/
 python/.vscode/
 python/.idea/
 .RDataTmp
+.idea/
