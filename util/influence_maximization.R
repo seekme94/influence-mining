@@ -383,7 +383,6 @@ ic_spread <- function (graph, seed, runs=100) {
     }
     count <- count + simulate_ic(graph, active);
     total <- total + count;
-    #print(paste('Spread for run #', i, count))
   }
   round(total / runs, 5)
 }
@@ -449,20 +448,14 @@ simulate_ic <- function(graph, active) {
     neighbour_nodes <- neighbors(graph, node)
     # Remove already activated nodes from neighbours
     neighbour_nodes <- neighbour_nodes[!neighbour_nodes %in% active]
+    neighbour_nodes <- neighbour_nodes[!neighbour_nodes %in% tried]
     # Try to activate inactive neighbours according to the weight on edge
     for (j in 1:length(neighbour_nodes)) {
-      print("I'm here")
-      if (neighbour_nodes[j]$tried) {
-        next
-      }
-      print("Now here")
       weight <- E(graph, P=c(node, neighbour_nodes[j]))$weight
-      print("Still alive")
       if (runif(1) <= weight) {
         count <- count + 1
       }
-      neighbour_nodes[j]$tried <- TRUE
-      print("Phew! Next")
+      tried <- c(tried, neighbour_nodes[j])
     }
   }
   count
@@ -615,7 +608,7 @@ get_influential_nodes <- function(graph, budget, measure="RESILIENCE", parallel=
 #' @param measure specifies the method to measure influence. Value MUST be "RESILIENCE", "INFLUENCE_IC" or "INFLUENCE_LT". Default is "RESILIENCE"
 #' @param parallel flag defines whether the execution will use parallel processing or not. Default is FALSE
 #' @return vector of resiliences of provided graph
-get_influential_nodes_greedy <- function(graph, budget, method="RESILIENCE") {
+get_influential_nodes_greedy <- function(graph, budget, measure="RESILIENCE") {
   size <- length(V(graph))
   if (budget < 1) {
     budget <- budget * size
@@ -630,10 +623,10 @@ get_influential_nodes_greedy <- function(graph, budget, method="RESILIENCE") {
     output <- NULL
     # For all nodes except seed
     for (node in setdiff(nodes, top_nodes)) {
-      # Find resilience of node with existing nodes in seed
-      output <- resilience(graph, c(top_nodes, node))
+      # Find influence of node with existing nodes in seed
+      output <- get_influence(graph, c(top_nodes, node), measure=measure)
       # If current node causes more influence than maximum so far, then swap
-      if (output < max_influence) {
+      if ((measure == "RESILIENCE" && output < max_influence) || (measure != "RESILIENCE" && output > max_influence)) {
         most_influential <- node
         max_influence <- output
       }
