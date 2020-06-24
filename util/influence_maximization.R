@@ -370,7 +370,7 @@ influence_lt <- function(graph, seed, steps, threshold) {
 #' @param runs is the number of times the loop should run
 #' @return output average spread
 #' @examples
-#' ic_spread(graph, seed=c(2,5,9,23), 5, 10)
+#' ic_spread(graph, seed=c(2,5,9,23), 10)
 ic_spread <- function (graph, seed, runs=100) {
   total <- 0
   for (i in 1:runs) {
@@ -393,10 +393,10 @@ ic_spread <- function (graph, seed, runs=100) {
 #' @param graph is the igraph object
 #' @param seed is a set of seed (initial nodes)
 #' @param runs is the number of times the loop should run
-#' @param current_best is the number of times the loop should run
+#' @param best_node is the best known node
 #' @return output average spread
 #' @examples
-#' ic_spread_plus(graph, seed=c(2,5,9,23), 5, 10, 2)
+#' ic_spread_plus(graph, seed=c(2,5,9,23), 10, 2)
 ic_spread_plus <- function (graph, seed, runs=100, best_node=0) {
   total <- 0
   for (i in 1:runs) {
@@ -429,24 +429,40 @@ ic_spread_plus <- function (graph, seed, runs=100, best_node=0) {
 simulate_ic <- function(graph, active) {
   # Algorithm: given a weighted graph G and a set of active nodes V,
   # each node u in V attempts to activate its neighbours with probability equal to the weight on its edge.
-  # If a coin toss with this probability is successful, the the inactive neighbour gets activated.
+  # If a coin toss with this probability is successful, then the inactive neighbour gets activated.
   # Once active, a node does not deactivate
+
   count <- 0
+  # If the graph is unweighted, then default the weights to 1
+  if (!is_weighted(graph)) {
+    E(graph)$weight <- 0.5
+  } else {
+    E(graph)$weight <- normalize_trait(E(graph)$weight)
+  }
+  tried <- NULL
   for (i in 1:length(active)) {
     # Get first node
     node <- active[1]
+    # Remove this node from active list
+    active <- active[-1]
     # Fetch neighbours of node
     neighbour_nodes <- neighbors(graph, node)
-    # Remove this node from active list
-    active <- active[2:length(active)]
     # Remove already activated nodes from neighbours
-    neighbour_nodes <- neighbour_nodes[!neighbour_nodes$name %in% active]
+    neighbour_nodes <- neighbour_nodes[!neighbour_nodes %in% active]
     # Try to activate inactive neighbours according to the weight on edge
-    for (neighbour in neighbour_nodes) {
-      weight <- E(graph, P=c(node, neighbour))$weight
+    for (j in 1:length(neighbour_nodes)) {
+      print("I'm here")
+      if (neighbour_nodes[j]$tried) {
+        next
+      }
+      print("Now here")
+      weight <- E(graph, P=c(node, neighbour_nodes[j]))$weight
+      print("Still alive")
       if (runif(1) <= weight) {
         count <- count + 1
       }
+      neighbour_nodes[j]$tried <- TRUE
+      print("Phew! Next")
     }
   }
   count
@@ -459,7 +475,7 @@ simulate_ic <- function(graph, active) {
 #' @param runs is the number of times the loop should run
 #' @return output average spread
 #' @examples
-#' lt_spread(graph, seed=c(2,5,9,23), 5, 10)
+#' lt_spread(graph, seed=c(2,5,9,23), 10)
 lt_spread <- function (graph, seed, runs=100) {
   total <- 0
   for (i in 1:runs) {
@@ -482,27 +498,29 @@ lt_spread <- function (graph, seed, runs=100) {
 #' @param graph is the weighted igraph object
 #' @param active represents number of active nodes in the graph
 #' @return number of nodes activated during simulation
-simulate_lt <- function(graph, active) {
+simulate_lt <- function(graph, active, threshold=0.5) {
   # Algorithm: given a weighted graph G and a set of active nodes V,
-  # each node u in V attempts to activate its neighbours with probability equal to the weight on its edge.
-  # If a coin toss with this probability is successful, the the inactive neighbour gets activated.
+  # each inactive node in the graph gets a chance to be activated with the probability being the collective weights on its edges with active nodes.
+  # If a coin toss with probability as the sum of weights of active neighbours is greater than given threshold, then the inactive node gets activated.
   # Once active, a node does not deactivate
+
   count <- 0
-  for (i in 1:length(active)) {
-    # Get first node
-    node <- active[1]
-    # Fetch neighbours of node
-    neighbour_nodes <- neighbors(graph, node)
-    # Remove this node from active list
-    active <- active[2:length(active)]
-    # Remove already activated nodes from neighbours
-    neighbour_nodes <- neighbour_nodes[!neighbour_nodes$name %in% active]
-    # Try to activate inactive neighbours according to the weight on edge
-    for (neighbour in neighbour_nodes) {
-      weight <- E(graph, P=c(node, neighbour))$weight
-      if (runif(1) <= weight) {
-        count <- count + 1
-      }
+  # If the graph is unweighted, then default the weights to 1
+  if (!is_weighted(graph)) {
+    E(graph)$weight <- 0.5
+  }
+  inactive <- unlist(lapply(active, function(active) {neighbors(graph, active)}))
+  inactive <- setdiff(inactive, active)
+  for (u in inactive) {
+    neighbours <- neighbors(graph, u)
+    active_neighbours <- intersect(neighbours, active)
+    if (length(neighbours) == 0) {
+      next
+    }
+    # If ratio of active nodes in neighbourhood of u is greater than or equal to threshold, then activate u
+    ratio <- (length(active_neighbours) / length(neighbours))
+    if (ratio >= threshold) {
+      count <- count + 1
     }
   }
   count
@@ -521,18 +539,35 @@ resilience <- function (graph, nodes) {
   vcount(graph)
 }
 
+#' This method quantifies the influence of a set of nodes in a graph
+#' @name get_influence
+#' @param graph is the igraph object
+#' @param nodes the set of nodes to calculate influence for
+#' @param measure specifies the method to measure influence. Value "RESILIENCE" (see resilience method); "INFLUENCE_IC" (see simulate_ic method); "INFLUENCE_LT" (see simulate_lt method). Default is "RESILIENCE"
+#' @return vector of resiliences of provided combinations
+get_influence <- function(graph, nodes, measure="RESILIENCE") {
+  if (measure == "RESILIENCE") {
+    resilience(graph, nodes)
+  } else if (measure == "INFLUENCE_IC") {
+    simulate_lt(graph, nodes)
+  } else if (measure == "INFLUENCE_LT") {
+    simulate_ic(graph, nodes)
+  }
+}
+
 #' This method returns resiliences of all combinations of sets of budget size from given graph
 #' @name get_influential_nodes
 #' @param graph is the igraph object
 #' @param budget defines size of combinations of nodes. Value must be between 0 and 1
+#' @param measure specifies the method to measure influence. Value MUST be "RESILIENCE", "INFLUENCE_IC" or "INFLUENCE_LT". Default is "RESILIENCE"
 #' @param parallel flag defines whether the execution will use parallel processing or not. Default is FALSE
 #' @return vector of resiliences of provided combinations
-get_influential_nodes <- function(graph, budget, parallel=TRUE) {
+get_influential_nodes <- function(graph, budget, measure="RESILIENCE", parallel=TRUE) {
   size <- length(V(graph))
   # Fetch all combinations of given budget
   combinations <- getall(iterpc(vcount(graph), round(budget)))
   samples <- 1:nrow(combinations)
-  resiliences <- NULL
+  influence_measures <- NULL
   if (parallel) {
     # Initiate parallel processing
     cores <- detectCores() - 2
@@ -541,21 +576,21 @@ get_influential_nodes <- function(graph, budget, parallel=TRUE) {
     if (Sys.info()[[1]] == "Linux") {
       registerDoMC(cores)
       # Loop for each combination in the sample
-      resiliences <- foreach (i = samples, .packages=c("igraph"), .export=c("resilience","largest_component")) %dopar% {
+      influence_measures <- foreach (i = samples, .packages=c("igraph"), .export=c("resilience","largest_component")) %dopar% {
         # Pick a random sample
         seed <- combinations[i, 1:budget]
         # Calculte the resilience after removal of nodes seed
-        resilience(graph, V(graph)[seed])
+        get_influence(graph, V(graph)[seed], measure=measure)
       }
       stopCluster(cl)
     } else {
       registerDoSNOW(cl)
       # Loop for each combination in the sample
-      resiliences <- foreach (i = samples, .packages=c("igraph"), .export=c("resilience","largest_component")) %dopar% {
+      influence_measures <- foreach (i = samples, .packages=c("igraph"), .export=c("resilience","largest_component")) %dopar% {
         # Pick a random sample
         seed <- combinations[i, 1:budget]
         # Calculte the resilience after removal of nodes seed
-        resilience(graph, V(graph)[seed])
+        get_influence(graph, V(graph)[seed], measure=measure)
       }
       # Stop parallel processing cluster
       stopCluster(cl)
@@ -565,10 +600,10 @@ get_influential_nodes <- function(graph, budget, parallel=TRUE) {
       # Pick sample
       seed <- combinations[i, 1:budget]
       # Calculte the resilience after removal of nodes seed
-      resiliences <- c(resiliences, resilience(graph, V(graph)[seed]))
+      influence_measures <- c(influence_measures, get_influence(graph, V(graph)[seed], measure=measure))
     }
   }
-  combinations <- cbind(combinations, unlist(resiliences))
+  combinations <- cbind(combinations, unlist(influence_measures))
   top_nodes <- V(graph)[combinations[which.min(combinations[,budget + 1]), 1:budget]]
   top_nodes
 }
@@ -577,9 +612,10 @@ get_influential_nodes <- function(graph, budget, parallel=TRUE) {
 #' @name get_influential_nodes_greedy
 #' @param graph is the igraph object
 #' @param budget defines size of combinations of nodes. Value must be between 0 and 1
+#' @param measure specifies the method to measure influence. Value MUST be "RESILIENCE", "INFLUENCE_IC" or "INFLUENCE_LT". Default is "RESILIENCE"
 #' @param parallel flag defines whether the execution will use parallel processing or not. Default is FALSE
 #' @return vector of resiliences of provided graph
-get_influential_nodes_greedy <- function(graph, budget) {
+get_influential_nodes_greedy <- function(graph, budget, method="RESILIENCE") {
   size <- length(V(graph))
   if (budget < 1) {
     budget <- budget * size
@@ -589,7 +625,7 @@ get_influential_nodes_greedy <- function(graph, budget) {
   top_nodes <- NULL
   # While seed < budget
   while (length(top_nodes) < budget) {
-    max_resilience <- size
+    max_influence <- size
     most_influential <- NULL
     output <- NULL
     # For all nodes except seed
@@ -597,9 +633,9 @@ get_influential_nodes_greedy <- function(graph, budget) {
       # Find resilience of node with existing nodes in seed
       output <- resilience(graph, c(top_nodes, node))
       # If current node causes more influence than maximum so far, then swap
-      if (output < max_resilience) {
+      if (output < max_influence) {
         most_influential <- node
-        max_resilience <- output
+        max_influence <- output
       }
     }
     # At the end, we should have node with maximum influence to add to seed
@@ -607,4 +643,3 @@ get_influential_nodes_greedy <- function(graph, budget) {
   }
   V(graph)[top_nodes]
 }
-
