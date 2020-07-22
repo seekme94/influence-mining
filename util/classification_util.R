@@ -1,4 +1,8 @@
 library(caret)
+library(xgboost)
+library(mlr)
+library(parallel)
+library(parallelMap)
 
 # Get Accuracy/Precision/Recall/F1-Score table
 get_prediction_results <- function(x, y, positive) {
@@ -32,3 +36,48 @@ discretize_naturally <- function(x, breaks=7) {
     }
   }
 }
+
+#' @title Learn XGradientBoosting classifier
+#' @name learn_xgboost_classifier
+#' @param formula: the formula for learning
+#' @param training: training dataset
+#' @param label: target variable name
+#' @param nthread: number of CPU threads to use
+#' @param nrounds (100 - 10000): maximum number of iterations. For classification, it is similar to the number of trees to grow.
+#' @return XGBoost model
+learn_xgboost_classifier <- function(formula, training, learning_features, label, nrounds=100, nthread=4, learn_hyperparameters=FALSE) {
+  model <- NULL
+  default_params = list(booster="gbtree", objective="binary:logistic", eta=0.1, gamma=0, max_depth=7, min_child_weight=1, subsample=1, colsample_bytree=1)
+  if (learn_hyperparameters) {
+    dtraining <- xgb.DMatrix(data=as.matrix(training[, learning_features]), label=training[, label])
+    # Tune number of iterations
+    xgbcv <- xgb.cv(data=dtraining, params=default_params, nrounds=nrounds, nfold=5, showsd=TRUE, stratified=TRUE, print_every_n=10, early_stopping_rounds=20, maximize=FALSE)
+    nrounds <- xgbcv$best_iteration
+    # Create parameter learner
+    learner <- makeLearner("classif.xgboost", predict.type="response")
+    learner$par.vals <- list(objective="binary:logistic", eval_metric="error", nrounds=nrounds, eta=0.1)
+    # Set parameter space
+    tune_params <- makeParamSet(
+      makeDiscreteParam("booster",values=c("gbtree","gblinear")),
+      makeIntegerParam("max_depth", lower=1, upper=10),
+      makeNumericParam("min_child_weight", lower=1, upper=5),
+      makeNumericParam("subsample", lower=0.5, upper=0.8),
+      makeNumericParam("colsample_bytree", lower=0.5, upper=0.8))
+    # Resampling strategy
+    resampling <- makeResampleDesc("CV", stratify=TRUE, iters=5)
+    # Search parameter
+    control <- makeTuneControlRandom(maxit=10)
+    # Enable parallelizing
+    parallelStartSocket(cpus=nthread)
+    # Tune
+    tune_training <- training[, c(learning_features, label)]
+    tune_training[, label] <- as.factor(tune_training[, label])
+    trainingtask <- makeClassifTask (data=tune_training, target=label)
+    tuner <- tuneParams(learner=learner, task=trainingtask, resampling=resampling, measures=acc, par.set=tune_params, control=control, show.info=TRUE)
+    print(tuner$y)
+    default_params = list(booster=tuner$x$booster, objective="binary:logistic", eta=0.3, gamma=1, max_depth=tuner$x$max_depth, min_child_weight=tuner$x$min_child_weight, subsample=tuner$x$subsample, colsample_bytree=tuner$x$colsample_bytree)
+  }
+  model <- xgboost(formula=formula, data=as.matrix(training[, learning_features]), label=training[, label], nthread=cores, nrounds=nrounds, params=default_params)
+  model
+}
+

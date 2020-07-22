@@ -1,6 +1,0 @@
-"","x"
-"Accuracy",0.979168829371258
-"Pos Pred Value",0.270380434782609
-"Sensitivity",0.753787878787879
-"Specificity",0.981246726034573
-"F1-Score",0.398
