@@ -45,11 +45,12 @@ compile_results <- function(uuid, graph, experiment, size, seed, influence_outpu
 # 3 for training; 3 for test
 seeds <- c(2, 3, 5, 8, 13, 21)
 prob <- 0.1
+
 test_method <- "RESILIENCE"
 # Repeat experiement for multiple sizes
 sizes <- c()#seq(from=15, to=45, by=5)
 for (size in sizes) {
-  budget <- size * prob
+  budget_size <- size * prob
   # SCALE FREE
   for (seed in seeds) {
     set.seed(seed)
@@ -57,7 +58,7 @@ for (size in sizes) {
     print(experiment)
     graph <- generate_scale_free(size)
     V(graph)$name <- 1:vcount(graph) - 1
-    out <- influence(graph, budget, optimal_solution=TRUE, test_method=test_method)
+    out <- influence(graph, budget_size, optimal_solution=TRUE, test_method=test_method)
     compile_results(uuid=UUIDgenerate(), graph, experiment, size, seed, out, test_method)
   }
   # SMALL WORLD
@@ -66,7 +67,7 @@ for (size in sizes) {
     print(experiment)
     graph <- generate_small_world(size, prob)
     V(graph)$name <- 1:vcount(graph) - 1
-    out <- influence(graph, budget, optimal_solution=TRUE, test_method=test_method)
+    out <- influence(graph, budget_size, optimal_solution=TRUE, test_method=test_method)
     compile_results(uuid=UUIDgenerate(), graph, experiment, size, seed, out, test_method)
   }
   # HOLME AND KIM
@@ -77,7 +78,7 @@ for (size in sizes) {
     new_connections <- 2
     graph <- generate_holme_kim(size, new_connections, triad_prob=prob)
     V(graph)$name <- 1:vcount(graph) - 1
-    out <- influence(graph, budget, optimal_solution=TRUE, test_method=test_method)
+    out <- influence(graph, budget_size, optimal_solution=TRUE, test_method=test_method)
     compile_results(uuid=UUIDgenerate(), graph, experiment, size, seed, out, test_method)
   }
 }
@@ -94,7 +95,7 @@ prob <- 0.025
 plan(multiprocess)
 
 for (size in sizes) {
-  budget <- ceiling(size * prob)
+  budget_size <- ceiling(size * prob)
   # SCALE FREE
   future_lapply(seeds, function(seed) {
     set.seed(seed)
@@ -102,7 +103,7 @@ for (size in sizes) {
     print(experiment)
     graph <- generate_scale_free(size)
     V(graph)$name <- 1:vcount(graph) - 1
-    out <- influence(graph, budget, optimal_solution=FALSE, test_method=test_method, heuristic="GREEDY")
+    out <- influence(graph, budget_size, optimal_solution=FALSE, test_method=test_method, heuristic="GREEDY")
     compile_results(uuid=UUIDgenerate(), graph, experiment, size, seed, out, test_method)
   })
 
@@ -113,7 +114,7 @@ for (size in sizes) {
     print(experiment)
     graph <- generate_small_world(size, prob)
     V(graph)$name <- 1:vcount(graph) - 1
-    out <- influence(graph, budget, optimal_solution=FALSE, test_method=test_method, heuristic="GREEDY")
+    out <- influence(graph, budget_size, optimal_solution=FALSE, test_method=test_method, heuristic="GREEDY")
     compile_results(uuid=UUIDgenerate(), graph, experiment, size, seed, out, test_method)
   })
 
@@ -125,7 +126,7 @@ for (size in sizes) {
     new_connections <- 2
     graph <- generate_holme_kim(size, new_connections, triad_prob=prob)
     V(graph)$name <- 1:vcount(graph) - 1
-    out <- influence(graph, budget, optimal_solution=FALSE, test_method=test_method, heuristic="GREEDY")
+    out <- influence(graph, budget_size, optimal_solution=FALSE, test_method=test_method, heuristic="GREEDY")
     compile_results(uuid=UUIDgenerate(), graph, experiment, size, seed, out, test_method)
   })
 }
@@ -194,17 +195,17 @@ biohs$name <- "bio-HS-CX"
 graphs <- list()
 
 seed <- 2
+budget <- 0.025
 for (graph in graphs) {
   print(as.data.frame(graph_summary(graph)))
-  size <- vcount(graph)
-  prob <- 0.025
-  budget <- size * prob
+  nodes <- vcount(graph)
+  budget_size <- nodes * budget
   set.seed(seed)
-  experiment <- paste("Influence experiment on graph_", graph$name, "(size=", size, ",", "probability=", prob, ")", sep='')
+  experiment <- paste("Influence experiment on graph_", graph$name, "(size=", nodes, ",", "probability=", prob, ")", sep='')
   print(experiment)
   V(graph)$name <- 1:vcount(graph) - 1
-  out <- influence(graph, budget, optimal_solution=FALSE, test_method=test_method, heuristic="GREEDY")
-  compile_results(uuid=UUIDgenerate(), graph, experiment, size, seed, out, test_method)
+  out <- influence(graph, budget_size, optimal_solution=FALSE, test_method=test_method, heuristic="GREEDY")
+  compile_results(uuid=UUIDgenerate(), graph, experiment, nodes, seed, out, test_method)
 }
 
 
@@ -364,13 +365,16 @@ start <- Sys.time()
 features <- columns[!columns %in% c("name", "graph_id", "seed", "influential", "influence", "test_method")]
 # Keep only the feature names in the model, or else...
 xgboost_model <- learn_xgboost_classifier(
-  formula=formula, train=train, learning_features=features, label="influential", nrounds=50, nthread=cores, learn_hyperparameters=FALSE)
+  formula=formula, train=train, learning_features=features, label="influential", nrounds=100, nthread=cores, learn_hyperparameters=FALSE,
+  default_params=list(booster="gbtree", objective="binary:logistic", eta=0.3, gamma=0, max_depth=3, min_child_weight=1, subsample=1, colsample_bytree=0.5))
 test <- newtest
 test$xgboost_prediction <- round(predict(xgboost_model, as.matrix(test[, xgboost_model$feature_names])))
 performance = get_prediction_results(test$influential, test$xgboost_prediction, '1')
+print(Sys.time() - start)
 print(performance)
 
-importance <- xgb.importance(model$feature_names, model)
+
+importance <- xgb.importance(xgboost_model$feature_names, xgboost_model)
 xgb.plot.importance (importance_matrix=importance[1:15])
 write.csv(performance, file=paste(root_dir, "xgboost_accuracy.txt", sep=''))
 resultset <- get_test_data_results(test, "xgboost_prediction")
@@ -378,7 +382,6 @@ write.csv(resultset, file=paste(root_dir, "xgboost_comparison.csv", sep=''), row
 xgb.save(xgboost_model, paste(root_dir, "xgboost_model.dat", sep=''))
 # Check the number of instances where ML performed better than the rest in terms of accuracy
 print(select(resultset, size:accuracy) %>% arrange(size, desc(accuracy)) %>% filter(size >= 30))
-print(Sys.time() - start)
 
 
 ##################

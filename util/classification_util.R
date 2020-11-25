@@ -42,12 +42,13 @@ discretize_naturally <- function(x, breaks=7) {
 #' @param formula: the formula for learning
 #' @param training: training dataset
 #' @param label: target variable name
-#' @param nthread: number of CPU threads to use
 #' @param nrounds (100 - 10000): maximum number of iterations. For classification, it is similar to the number of trees to grow.
+#' @param nthread: number of CPU threads to use
+#' @param learn_hyperparameters: when true, enables learning the optimal parameter values. Caution! This option significantly increases execution time
 #' @return XGBoost model
-learn_xgboost_classifier <- function(formula, training, learning_features, label, nrounds=100, nthread=4, learn_hyperparameters=FALSE) {
+learn_xgboost_classifier <- function(formula, training, learning_features, label, nrounds=100, nthread=4, learn_hyperparameters=FALSE,
+                                     default_params=list(booster="gbtree", objective="binary:logistic", eta=0.3, gamma=0, max_depth=5, min_child_weight=1, subsample=1, colsample_bytree=1)) {
   model <- NULL
-  default_params = list(booster="gbtree", objective="binary:logistic", eta=0.1, gamma=0, max_depth=7, min_child_weight=1, subsample=1, colsample_bytree=1)
   if (learn_hyperparameters) {
     dtraining <- xgb.DMatrix(data=as.matrix(training[, learning_features]), label=training[, label])
     # Tune number of iterations

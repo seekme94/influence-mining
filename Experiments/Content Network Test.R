@@ -29,7 +29,7 @@ sentence_distance <- function (a, b, split=" ") {
   if (length(a_arr) > length(b_arr))
     matches <- which (b_arr %in% a_arr)
   else
-    matches <- which (a_arr %in% b_arr) 
+    matches <- which (a_arr %in% b_arr)
   diff <- length(matches) / max(length(a_arr), length(b_arr))
   diff
 }
@@ -54,9 +54,9 @@ limit_tweets <- function(data, no_hashtags=FALSE, no_links=TRUE, english_only=TR
   # Limit data size by picking n number of nodes randomly
   if (limit != 0) {
     data$tweet_id <- 1:nrow(data)
-    data <- data[data$tweet_id %in% sample(data$tweet_id, limit, replace=FALSE),]    
+    data <- data[data$tweet_id %in% sample(data$tweet_id, limit, replace=FALSE),]
   }
-  
+
   # Remove too similar tweets
   if (no_duplicates) {
     dupes <- NULL
@@ -79,7 +79,7 @@ limit_tweets <- function(data, no_hashtags=FALSE, no_links=TRUE, english_only=TR
 # Using text mining functions, convert the data into a a term-frequency x inverse document-frequency matrix
 create_tfidf_matrix <- function (data, no_punctuations=TRUE, no_numbers=TRUE, no_whitespaces=TRUE, stemming=TRUE, additional_stopwords=c()) {
   ## Turn all text and hashtags to lower case to avoid case disruption
-  data$content <- tolower(data$content)    
+  data$content <- tolower(data$content)
   # IMPORTANT: in order to retrieve the tweet Id back, we need to create a mapping
   tweetReader <- readTabular(mapping=list(content="text", id="tweet_id"))
   ## Read tweets text and save as a corpus; reader control writes respective tweet_id in timension names
@@ -176,7 +176,7 @@ create_names_edgelist <- function (data, edgelist) {
 }
 
 # Assigns a rank to each row, based on ordering on column number provided
-rank <- function(data, rank_by_colnum) {
+rank_by_column <- function(data, rank_by_colnum) {
   data <- data[with(data, order(data[,rank_by_colnum])),]
   data[,rank_by_colnum] <- as.factor(data[,rank_by_colnum])
   data$rank <- NULL
@@ -268,7 +268,7 @@ for (method in cent_methods) {
     inf_tweets <- nodes[inf_cent$initial_seed]$name
     tweets <- read.csv(output)
     tweets[tweets$tweet_id %in% inf_tweets,c(1:3,13)]
-    
+
     rt_tweets <- tweets[tweets$rt_count > 0,c(1:4,13)]
     write(paste("Ratio of retweeted tweets:", nrow(rt_tweets)/nrow(tweets)), file=results, append=TRUE)
     hd_tweets <- tweets[tweets$tweet_id %in% inf_tweets,c(1:4,13)]
@@ -292,15 +292,15 @@ sorted_between <- centralities[with(centralities, order(-between)),]
 sorted_eigen <- centralities[with(centralities, order(-eigen)),]
 sorted_core <- centralities[with(centralities, order(-core)),]
 
-ranked_degree <- rank(sorted_degree, 2)
-ranked_close <- rank(sorted_close, 3)
-ranked_between <- rank(sorted_between, 4)
-ranked_eigen <- rank(sorted_eigen, 5)
-ranked_core <- rank(sorted_core, 6)
+ranked_degree <- rank_by_column(sorted_degree, 2)
+ranked_close <- rank_by_column(sorted_close, 3)
+ranked_between <- rank_by_column(sorted_between, 4)
+ranked_eigen <- rank_by_column(sorted_eigen, 5)
+ranked_core <- rank_by_column(sorted_core, 6)
 
 # Rank all tweets by retweet count
 sorted_tweets <- tweets[with(tweets, order(-rt_count)),]
-ranked_tweets <- rank(sorted_tweets, 13)
+ranked_tweets <- rank_by_column(sorted_tweets, 13)
 head(ranked_tweets, n=5)
 
 # Merge all the data frames by ranks for each centrality into main ranked data frame
@@ -316,7 +316,7 @@ out("Wrote CSVs of Ids, ranked by all centrality methods used.")
 # maxim_tweets <- nodes[maxim$influential_nodes]$name
 # tweets <- read.csv(output)
 # tweets[tweets$tweet_id %in% maxim_tweets,c(1:3,13)]
-# 
+#
 # rt_tweets <- tweets[tweets$rt_count > 0,c(1:4,13)]
 # hd_tweets <- tweets[tweets$tweet_id %in% maxim_tweets,c(1:4,13)]
 # rt_hd_tweets <- tweets[tweets$tweet_id %in% maxim_tweets & tweets$rt_count > 0,c(1:4,13)]
@@ -330,7 +330,7 @@ out("Wrote CSVs of Ids, ranked by all centrality methods used.")
 # commonality <- length(common) / length(deg_nodes)
 # commonality
 # write(paste("Commonality between both sets of nodes:", commonality), file=results, append=TRUE)
-# 
+#
 # # Check if the rest of the nodes are in immediate neighbourhood
 # lt_neighbours <- neighborhood(graph, order=1, nodes=deg_nodes)
 # neighbours <- nodes[unique(sort(unlist(lt_neighbours)))]
@@ -342,6 +342,6 @@ out("Wrote CSVs of Ids, ranked by all centrality methods used.")
 # commonality <- length(common) / length(max_nodes)
 # commonality
 # write(paste("Commonality between maximizing nodes and immediate neigbours of high-degree nodes:", commonality), file=results, append=TRUE)
-# 
+#
 # write(paste("Finished on:", date()), file=results, append=TRUE)
-# 
+#
