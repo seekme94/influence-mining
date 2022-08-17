@@ -47,7 +47,7 @@ discretize_naturally <- function(x, breaks=7) {
 #' @param learn_hyperparameters: when true, enables learning the optimal parameter values. Caution! This option significantly increases execution time
 #' @return XGBoost model
 learn_xgboost_classifier <- function(formula, training, learning_features, label, nrounds=100, nthread=4, learn_hyperparameters=FALSE,
-                                     default_params=list(booster="gbtree", objective="binary:logistic", eta=0.3, gamma=0, max_depth=5, min_child_weight=1, subsample=1, colsample_bytree=1), verbose=FALSE) {
+                                     default_params=list(booster="gbtree", objective="binary:logistic", eta=0.3, gamma=0, max_depth=5, min_child_weight=1, subsample=1, colsample_bytree=1)) {
   model <- NULL
   if (learn_hyperparameters) {
     dtraining <- xgb.DMatrix(data=as.matrix(training[, learning_features]), label=training[, label])
@@ -78,7 +78,7 @@ learn_xgboost_classifier <- function(formula, training, learning_features, label
     print(tuner$y)
     default_params = list(booster=tuner$x$booster, objective="binary:logistic", eta=0.3, gamma=1, max_depth=tuner$x$max_depth, min_child_weight=tuner$x$min_child_weight, subsample=tuner$x$subsample, colsample_bytree=tuner$x$colsample_bytree)
   }
-  model <- xgboost(formula=formula, data=as.matrix(training[, learning_features]), label=training[, label], nthread=cores, nrounds=nrounds, params=default_params, verbose=verbose)
+  model <- xgboost(formula=formula, data=as.matrix(training[, learning_features]), label=training[, label], nthread=cores, nrounds=nrounds, params=default_params)
   model
 }
 
