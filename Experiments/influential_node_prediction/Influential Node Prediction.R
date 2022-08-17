@@ -17,7 +17,11 @@ library(doSNOW) # For Windows
 #devtools::install_github("randy3k/iterpc") # Alternative way to install iterpc
 library(future.apply)
 library(dplyr)
+library(centiserve)
+library(expm)
+library(linkcomm)
 library(xgboost)
+library(beepr)
 
 source("util/classification_util.R")
 root_dir <- "Experiments/influential_node_prediction/"
@@ -35,6 +39,39 @@ compile_results <- function(uuid, graph, experiment, size, seed, influence_outpu
   write.table(data, file=filename, quote=FALSE, row.names=FALSE, append=FALSE, sep=',')
   write.table(results, file=paste(root_dir, "optimal_nodes.json", sep=''), quote=FALSE, row.names=FALSE, append=TRUE)
 }
+
+#' This function extends the original experiment by adding more centrality methods for each graph in data directory
+compile_extended_results <- function() {
+  files <- Sys.glob(paste0(root_dir, "data/graph_1900_93d598ae-a48a-4be5-8622-eef9b4a02436*.el"))
+  for (filename in files) {
+    print(filename)
+    # Open existing CSV file
+    csv_file <- sub(".el", ".csv", filename)
+    data <- read.csv(csv_file)
+    graph <- read.graph(file = filename, format='edgelist', directed=FALSE)
+    node_traits=c("AVERAGE_DISTANCE", "BARYCENTER", "CLUSTERRANK", "CROSS_CLIQUE", "CURRENTFLOW_CLOSENESS", "DECAY", "ENTROPY", "FREEMAN_CLOSENESS", "GEODESIC_K_PATH", "KATZ", "LAPLACIAN", "LATORA_CLOSENESS", "LEVERAGE", "LINCENT", "LOBBY", "MARKOV", "MAX_NEIGHBORHOOD_COMPONENT", "MAX_NEIGHBORHOOD_DENSITY", "RADIALITY", "RESIDUAL_CLOSENESS", "TOPOLOGICAL_COEFFICIENT")
+    print("Merging")
+    for (trait in node_traits) {
+      print(trait)
+      if (vcount(graph) < nrow(data)) {
+        data[, tolower(trait)] <- 0
+        next
+      }
+      set_zero <- (trait == "AVERAGE_DISTANCE" && any(is.loop(graph))) ||
+                  (vcount(graph) > 1000 && trait %in% c("CURRENTFLOW_CLOSENESS", "ENTROPY", "CROSS_CLIQUE")) ||
+                  (!is.connected(graph, mode="strong") && trait %in% c("AVERAGE_DISTANCE", "BARYCENTER", "CURRENTFLOW_CLOSENESS", "DECAY", "FREEMAN_CLOSENESS"))
+      if (set_zero) {
+        data[, tolower(trait)] <- 0
+      } else {
+        scores <- get_centrality_scores(graph, trait, normalize=TRUE)
+        scores[is.na(scores)] <- 0 # Deal with NA's
+        data[, tolower(trait)] <- scores
+      }
+    }
+    write.table(data, file=csv_file, quote=FALSE, row.names=FALSE, append=FALSE, sep=',')
+  }
+}
+
 
 ###################################
 #### Experiment settings
@@ -208,6 +245,10 @@ for (graph in graphs) {
   compile_results(uuid=UUIDgenerate(), graph, experiment, nodes, seed, out, test_method)
 }
 
+# Caution! This line below  will compute 30 additional features for each graph in data directory. THIS WILL TAKE LONG TIME
+### compile_extended_results()
+
+
 
 #################################
 #### Read results from all graphs
@@ -216,7 +257,7 @@ for (graph in graphs) {
 results <- fromJSON(paste(readLines(paste(root_dir, "optimal_nodes.json", sep=''))))
 
 data <- NULL
-cores <- 6
+cores <- 4
 
 # For all rows in results
 for (i in 1:nrow(results)) {
@@ -248,20 +289,17 @@ for (i in 1:nrow(results)) {
 
 # View a brief summary of data
 length(unique(data$graph_id))
-summary(data)
 
 # Prediction formula considering both node and graph traits
-formula <- influential ~ degree + closeness + betweenness + eigenvector + eccentricity + coreness + pagerank + ci + graph_clust_coef + graph_density + graph_assortativity
-node_traits <- c("degree", "betweenness", "closeness", "eigenvector", "eccentricity", "coreness", "pagerank", "ci")
+node_traits <- c("degree", "betweenness", "closeness", "eigenvector", "eccentricity", "coreness", "pagerank", "ci", "average_distance", "barycenter", "clusterrank", "cross_clique", "currentflow_closeness", "decay", "entropy",
+                 "freeman_closeness", "geodesic_k_path", "katz", "laplacian", "latora_closeness", "leverage", "lincent", "lobby", "markov", "max_neighborhood_component", "max_neighborhood_density", "residual_closeness", "topological_coefficient")
 graph_traits <- c("graph_size", "graph_edges", "graph_avg_degree", "graph_max_degree", "graph_apl", "graph_clust_coef", "graph_diameter", "graph_density", "graph_assortativity", "graph_avg_distance", "graph_triads", "graph_girth")
 columns <- c("name", "graph_id", "seed", "influential", "influence", "test_method", node_traits, graph_traits)
 
-# Normalize data
-data <- normalize_data(data, columns=c("degree", "betweenness", "closeness", "eigenvector", "eccentricity", "coreness", "pagerank", "ci"))
 summary(data)
 # Split into 50/50 training and test sets
-train <- data[data$seed <= 5, columns]
-test <- data[data$seed > 5, columns]
+train <- data[data$seed <= 5, ]
+test <- data[data$seed > 5, ]
 
 # Influence by network traits
 newtest <- NULL
@@ -304,10 +342,110 @@ for (graph_id in unique(test$graph_id)) {
     graph$inf_by_pagerank <- 0
     graph$inf_by_pagerank[graph$name %in% inf_by_pagerank[[1]]] <- 1
   }
-  { # Label top n high-pagerank nodes as influential
+  { # Label top n high-ci nodes as influential
     inf_by_ci <- head(select(arrange(graph, desc(ci)), name), influential_size)
     graph$inf_by_ci <- 0
     graph$inf_by_ci[graph$name %in% inf_by_ci[[1]]] <- 1
+  }
+  { # Label top n high-average_distance nodes as influential
+    inf_by_average_distance <- head(select(arrange(graph, desc(average_distance)), name), influential_size)
+    graph$inf_by_average_distance <- 0
+    graph$inf_by_average_distance[graph$name %in% inf_by_average_distance[[1]]] <- 1
+  }
+  { # Label top n high-barycenter nodes as influential
+    inf_by_barycenter <- head(select(arrange(graph, desc(barycenter)), name), influential_size)
+    graph$inf_by_barycenter <- 0
+    graph$inf_by_barycenter[graph$name %in% inf_by_barycenter[[1]]] <- 1
+  }
+  { # Label top n high-clusterrank nodes as influential
+    inf_by_clusterrank <- head(select(arrange(graph, desc(clusterrank)), name), influential_size)
+    graph$inf_by_clusterrank <- 0
+    graph$inf_by_clusterrank[graph$name %in% inf_by_clusterrank[[1]]] <- 1
+  }
+  { # Label top n high-cross_clique nodes as influential
+    inf_by_cross_clique <- head(select(arrange(graph, desc(cross_clique)), name), influential_size)
+    graph$inf_by_cross_clique <- 0
+    graph$inf_by_cross_clique[graph$name %in% inf_by_cross_clique[[1]]] <- 1
+  }
+  { # Label top n high-currentflow_closeness nodes as influential
+    inf_by_currentflow_closeness <- head(select(arrange(graph, desc(currentflow_closeness)), name), influential_size)
+    graph$inf_by_currentflow_closeness <- 0
+    graph$inf_by_currentflow_closeness[graph$name %in% inf_by_currentflow_closeness[[1]]] <- 1
+  }
+  { # Label top n high-decay nodes as influential
+    inf_by_decay <- head(select(arrange(graph, desc(decay)), name), influential_size)
+    graph$inf_by_decay <- 0
+    graph$inf_by_decay[graph$name %in% inf_by_decay[[1]]] <- 1
+  }
+  { # Label top n high-entropy nodes as influential
+    inf_by_entropy <- head(select(arrange(graph, desc(entropy)), name), influential_size)
+    graph$inf_by_entropy <- 0
+    graph$inf_by_entropy[graph$name %in% inf_by_entropy[[1]]] <- 1
+  }
+  { # Label top n high-freeman_closeness nodes as influential
+    inf_by_freeman_closeness <- head(select(arrange(graph, desc(freeman_closeness)), name), influential_size)
+    graph$inf_by_freeman_closeness <- 0
+    graph$inf_by_freeman_closeness[graph$name %in% inf_by_freeman_closeness[[1]]] <- 1
+  }
+  { # Label top n high-geodesic_k_path nodes as influential
+    inf_by_geodesic_k_path <- head(select(arrange(graph, desc(geodesic_k_path)), name), influential_size)
+    graph$inf_by_geodesic_k_path <- 0
+    graph$inf_by_geodesic_k_path[graph$name %in% inf_by_geodesic_k_path[[1]]] <- 1
+  }
+  { # Label top n high-katz nodes as influential
+    inf_by_katz <- head(select(arrange(graph, desc(katz)), name), influential_size)
+    graph$inf_by_katz <- 0
+    graph$inf_by_katz[graph$name %in% inf_by_katz[[1]]] <- 1
+  }
+  { # Label top n high-laplacian nodes as influential
+    inf_by_laplacian <- head(select(arrange(graph, desc(laplacian)), name), influential_size)
+    graph$inf_by_laplacian <- 0
+    graph$inf_by_laplacian[graph$name %in% inf_by_laplacian[[1]]] <- 1
+  }
+  { # Label top n high-latora_closeness nodes as influential
+    inf_by_latora_closeness <- head(select(arrange(graph, desc(latora_closeness)), name), influential_size)
+    graph$inf_by_latora_closeness <- 0
+    graph$inf_by_latora_closeness[graph$name %in% inf_by_latora_closeness[[1]]] <- 1
+  }
+  { # Label top n high-leverage nodes as influential
+    inf_by_leverage <- head(select(arrange(graph, desc(leverage)), name), influential_size)
+    graph$inf_by_leverage <- 0
+    graph$inf_by_leverage[graph$name %in% inf_by_leverage[[1]]] <- 1
+  }
+  { # Label top n high-lincent nodes as influential
+    inf_by_lincent <- head(select(arrange(graph, desc(lincent)), name), influential_size)
+    graph$inf_by_lincent <- 0
+    graph$inf_by_lincent[graph$name %in% inf_by_lincent[[1]]] <- 1
+  }
+  { # Label top n high-lobby nodes as influential
+    inf_by_lobby <- head(select(arrange(graph, desc(lobby)), name), influential_size)
+    graph$inf_by_lobby <- 0
+    graph$inf_by_lobby[graph$name %in% inf_by_lobby[[1]]] <- 1
+  }
+  { # Label top n high-markov nodes as influential
+    inf_by_markov <- head(select(arrange(graph, desc(markov)), name), influential_size)
+    graph$inf_by_markov <- 0
+    graph$inf_by_markov[graph$name %in% inf_by_markov[[1]]] <- 1
+  }
+  { # Label top n high-max_neighborhood_component nodes as influential
+    inf_by_max_neighborhood_component <- head(select(arrange(graph, desc(max_neighborhood_component)), name), influential_size)
+    graph$inf_by_max_neighborhood_component <- 0
+    graph$inf_by_max_neighborhood_component[graph$name %in% inf_by_max_neighborhood_component[[1]]] <- 1
+  }
+  { # Label top n high-max_neighborhood_density nodes as influential
+    inf_by_max_neighborhood_density <- head(select(arrange(graph, desc(max_neighborhood_density)), name), influential_size)
+    graph$inf_by_max_neighborhood_density <- 0
+    graph$inf_by_max_neighborhood_density[graph$name %in% inf_by_max_neighborhood_density[[1]]] <- 1
+  }
+  { # Label top n high-residual_closeness nodes as influential
+    inf_by_residual_closeness <- head(select(arrange(graph, desc(residual_closeness)), name), influential_size)
+    graph$inf_by_residual_closeness <- 0
+    graph$inf_by_residual_closeness[graph$name %in% inf_by_residual_closeness[[1]]] <- 1
+  }
+  { # Label top n high-topological_coefficient nodes as influential
+    inf_by_topological_coefficient <- head(select(arrange(graph, desc(topological_coefficient)), name), influential_size)
+    graph$inf_by_topological_coefficient <- 0
+    graph$inf_by_topological_coefficient[graph$name %in% inf_by_topological_coefficient[[1]]] <- 1
   }
   newtest <- rbind(newtest, graph)
 }
@@ -359,65 +497,118 @@ get_test_data_results <- function(test, prediction_column) {
   resultset
 }
 
+
+# Calculate traits for test data
+selective_node_traits <- c("DEGREE", "BETWEENNESS", "CLOSENESS", "EIGENVECTOR", "ECCENTRICITY", "CROSS_CLIQUE", "CURRENTFLOW_CLOSENESS", "FREEMAN_CLOSENESS", "LAPLACIAN", "LEVERAGE", "LOBBY", "TOPOLOGICAL_COEFFICIENT")
+selective_graph_traits <- c("SIZE", "EDGES", "AVERAGE_DEGREE", "MAX_DEGREE", "AVERAGE_PATH_LENGTH", "CLUSTERING_COEFFICIENT", "DIAMETER", "DENSITY", "ASSORTATIVITY", "AVERAGE_DISTANCE", "TRIADS", "GIRTH")
+
+author <- largest_component(read.graph("dataset/author_netscience.txt", directed=FALSE))
+ita2000 <- largest_component(read.graph("dataset/ita2000.txt", directed=FALSE))
+caida <- largest_component(read.graph("dataset/as-caida.txt", directed=FALSE))
+jdk <- largest_component(read.graph("dataset/jdk6_dependencies.txt", directed=FALSE))
+#wordnet <- largest_component(read.graph("dataset/wordnet.txt", directed=FALSE))
+city2010 <- largest_component(read.graph("dataset/citycity_weighted_2010.csv", directed=FALSE, format = "ncol"))
+city2010$name <- "city2010"
+V(city2010)$name <- 1:vcount(city2010)
+city2013 <- largest_component(read.graph("dataset/citycity_weighted_2013.csv", directed=FALSE, format = "ncol"))
+city2013$name <- "city2013"
+V(city2013)$name <- 1:vcount(city2013)
+city2016 <- largest_component(read.graph("dataset/citycity_weighted_2016.csv", directed=FALSE, format = "ncol"))
+city2016$name <- "city2016"
+V(city2016)$name <- 1:vcount(city2016)
+city2019 <- largest_component(read.graph("dataset/citycity_weighted_2019.csv", directed=FALSE, format = "ncol"))
+city2019$name <- "city2019"
+V(city2019)$name <- 1:vcount(city2019)
+
+graph_names <- c("author", "ita2000", "caida", "jdk", "city2010", "city2013", "city2016", "city2019")
+graphs <- list(author, ita2000, caida, jdk, city2010, city2013, city2016, city2019)
+
+# Calculate traits and save to CSV files
+i <- 0
+for (graph in graphs) {
+  i <- i + 1
+  print(graph_names[i])
+  data <- get_graph_traits(graph, graph_traits=selective_graph_traits, node_traits=c("DEGREE", "CORENESS", "PAGERANK", "COLLECTIVE_INFLUENCE"), normalize=TRUE)
+  for (trait in selective_node_traits) {
+    print(trait)
+    if (vcount(graph) < nrow(data)) {
+      data[, tolower(trait)] <- 0
+      next
+    }
+    set_zero <- (vcount(graph) > 1000 && trait %in% c("CURRENTFLOW_CLOSENESS", "ENTROPY", "CROSS_CLIQUE")) ||
+      (!is.connected(graph, mode="strong") && trait %in% c("BARYCENTER", "CURRENTFLOW_CLOSENESS", "DECAY", "FREEMAN_CLOSENESS"))
+    if (set_zero) {
+      data[, tolower(trait)] <- 0
+    } else {
+      scores <- get_centrality_scores(graph, trait, normalize=TRUE)
+      scores[is.na(scores)] <- 0 # Deal with NA's
+      data[, tolower(trait)] <- scores
+    }
+  }
+  filename <- paste(root_dir, "data/", graph_names[i], ".csv", sep='')
+  write.table(data, file=filename, quote=FALSE, row.names=FALSE, append=FALSE, sep=',')
+}
+
+
+###############################
+# Model Learning and Evaluation
+###############################
+
+# Normalize data
+selected_features <- c("graph_size", "graph_avg_degree", "graph_apl", "graph_clust_coef", "graph_density", "graph_triads",
+                       "coreness", "pagerank", "ci", "degree", "betweenness", "closeness", "eigenvector", "cross_clique", "currentflow_closeness", "freeman_closeness", "laplacian", "leverage", "lobby", "topological_coefficient")
+selected_nodal_features <- selected_features[sapply(selected_features, function(x) {!startsWith(x, "graph_")})]
+test <- newtest
+train <- normalize_data(train, columns=selected_nodal_features)
+test <- normalize_data(test, columns=selected_nodal_features)
+
+selected_features <- c("graph_size", "graph_avg_degree", "graph_apl", "graph_clust_coef", "graph_density", "graph_triads",
+                       "coreness", "pagerank", "ci", "degree", "betweenness", "closeness", "eigenvector", "cross_clique", "currentflow_closeness", "freeman_closeness", "laplacian", "leverage", "lobby", "topological_coefficient")
+
 ## Learn prediction model
 start <- Sys.time()
-# Exclude non-numeric and label data
-features <- columns[!columns %in% c("name", "graph_id", "seed", "influential", "influence", "test_method")]
-# Keep only the feature names in the model, or else...
-xgboost_model <- learn_xgboost_classifier(
-  formula=formula, train=train, learning_features=features, label="influential", nrounds=100, nthread=cores, learn_hyperparameters=FALSE,
-  default_params=list(booster="gbtree", objective="binary:logistic", eta=0.3, gamma=0, max_depth=3, min_child_weight=1, subsample=1, colsample_bytree=0.5))
-test <- newtest
+# Exclude non-numeric and label data and keep only the feature names in the model
+formula <- influential ~ .
+
+xgboost_model <- learn_xgboost_classifier(formula=formula, train=train, label="influential", learning_features=selected_features,
+      nrounds=100, nthread=cores, learn_hyperparameters=TRUE, default_params=list(booster="gbtree", objective="binary:logistic",
+      eta=0.3, gamma=0, max_depth=3, min_child_weight=1, subsample=1, colsample_bytree=0.5))
 test$xgboost_prediction <- round(predict(xgboost_model, as.matrix(test[, xgboost_model$feature_names])))
 performance = get_prediction_results(test$influential, test$xgboost_prediction, '1')
 print(Sys.time() - start)
 print(performance)
 
-
 importance <- xgb.importance(xgboost_model$feature_names, xgboost_model)
-xgb.plot.importance (importance_matrix=importance[1:15])
+xgb.plot.importance (importance_matrix=importance[1:20])
 write.csv(performance, file=paste(root_dir, "xgboost_accuracy.txt", sep=''))
 resultset <- get_test_data_results(test, "xgboost_prediction")
 write.csv(resultset, file=paste(root_dir, "xgboost_comparison.csv", sep=''), row.names=FALSE, quote=TRUE)
 xgb.save(xgboost_model, paste(root_dir, "xgboost_model.dat", sep=''))
 # Check the number of instances where ML performed better than the rest in terms of accuracy
 print(select(resultset, size:accuracy) %>% arrange(size, desc(accuracy)) %>% filter(size >= 30))
-
-
-##################
-# Model Evaluation
-##################
-
 model <- xgboost_model
 
 ################
 # Test on graphs
 ################
-author <- largest_component(read.graph("dataset/author_netscience.txt", directed=FALSE))
-ita2000 <- largest_component(read.graph("dataset/ita2000.txt", directed=FALSE))
-caida <- largest_component(read.graph("dataset/as-caida.txt", directed=FALSE))
-jdk <- largest_component(read.graph("dataset/jdk6_dependencies.txt", directed=FALSE))
 
-graphs <- list(author, ita2000, caida, jdk)
-graph_names <- c("author", "ita2000", "caida", "jdk")
-test_methods <- c("RESILIENCE", "INFLUENCE_IC", "INFLUENCE_LT")
-for (test_method in test_methods) {
-  print(test_method)
-  i <- 0
-  for(graph in graphs) {
-    start <- Sys.time()
-    i <- i + 1
-    print(paste("Graph:", graph_names[i], "Power law coefficient (alpha):", round(fit_power_law(graph)$alpha, 3)))
-    node_traits <- c("DEGREE", "BETWEENNESS", "CLOSENESS", "EIGENVECTOR", "ECCENTRICITY", "CORENESS", "PAGERANK", "COLLECTIVE_INFLUENCE")
-    graph_traits <- c("SIZE", "EDGES", "AVERAGE_DEGREE", "MAX_DEGREE", "AVERAGE_PATH_LENGTH", "CLUSTERING_COEFFICIENT", "DIAMETER", "DENSITY", "ASSORTATIVITY", "AVERAGE_DISTANCE", "TRIADS", "GIRTH")
-    test <- get_graph_traits(graph=graph, node_traits=node_traits, graph_traits=graph_traits, verbose=FALSE)
-    test <- as.data.frame(test)
-    # Make predictions using model
-    test$prediction_prob <- predict(model, newdata=as.matrix(test[, model$feature_names]))
-    test$graph_id <- UUIDgenerate()
-    # Influential nodes by all traits
-    results <- NULL
-    size <- nrow(test) * 0.05
+# Test the ML model
+test_methods <- c("RESILIENCE", "INFLUENCE_IC")
+i <- 0
+for(graph in graphs) {
+  start <- Sys.time()
+  i <- i + 1
+  print(paste("Graph:", graph_names[i], "Power law coefficient (alpha):", round(fit_power_law(graph)$alpha, 3)))
+  test <- read.csv(paste(root_dir, "data/", graph_names[i], ".csv", sep=''))
+  # Make predictions using model
+  test$prediction_prob <- predict(model, newdata=as.matrix(test[, model$feature_names]))
+  test$graph_id <- UUIDgenerate()
+  # Influential nodes by all traits
+  results <- NULL
+  size <- nrow(test) * 0.05
+  for (test_method in test_methods) {
+    print(test_method)
+    i <- 0
     # Random nodes
     results$random <- get_influence(graph, sample(V(graph), size), test_method=test_method)
     # By degree
@@ -432,7 +623,6 @@ for (test_method in test_methods) {
     # By collective influence
     inf <- arrange(test, desc(ci))[1:size, "name"]
     results$ci <- get_influence(graph, V(graph)[inf], test_method=test_method)
-
     # Resilience by model. Pick top n by probability
     inf <- arrange(test, desc(prediction_prob))[1:size, "name"]
     results$model <- get_influence(graph, V(graph)[inf], test_method=test_method)
@@ -440,3 +630,4 @@ for (test_method in test_methods) {
     print(Sys.time() - start)
   }
 }
+
